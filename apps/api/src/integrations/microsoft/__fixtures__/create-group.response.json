@@ -1,0 +1,10 @@
+{
+  "id": "72f988bf-0000-1111-2222-2d7cd011db47",
+  "displayName": "Turma Exemplo - Matemática",
+  "description": "Turma espelhada criada pelo Bimo",
+  "mailNickname": "TurmaExemploMatematica",
+  "groupTypes": ["Unified"],
+  "mailEnabled": false,
+  "securityEnabled": false,
+  "visibility": "Private"
+}

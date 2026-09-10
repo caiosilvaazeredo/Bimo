@@ -1,0 +1,63 @@
+import { Module, OnModuleInit } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { SyncQueueModule } from '../sync-queue/sync-queue.module';
+import { SyncWorkerService } from '../sync-queue/sync-worker.service';
+import { SYNC_JOB_HANDLERS } from '../sync-queue/sync-job-handler';
+import { TurmaEspelhadaModule } from '../turma-espelhada/turma-espelhada.module';
+import { CreateTurmaEspelhadaHandler } from '../turma-espelhada/create-turma-espelhada.handler';
+
+const POLL_INTERVAL_MS = 5_000;
+
+/**
+ * Roda o worker de sincronização embutido no mesmo processo da API por
+ * padrão (bom o suficiente para a escala piloto do Free Tier). Em
+ * produção pós-piloto, este módulo pode virar um processo Node dedicado
+ * sem tocar nos handlers (RNF-ARCH-02).
+ *
+ * Desativa em testes / quando WORKERS_ENABLED=false, para não tentar
+ * bater no banco fora de um ambiente real.
+ */
+@Module({
+  imports: [SyncQueueModule, TurmaEspelhadaModule],
+  providers: [
+    SyncWorkerService,
+    {
+      provide: SYNC_JOB_HANDLERS,
+      useFactory: (createTurmaHandler: CreateTurmaEspelhadaHandler) => [
+        createTurmaHandler,
+      ],
+      inject: [CreateTurmaEspelhadaHandler],
+    },
+  ],
+  exports: [SyncWorkerService],
+})
+export class WorkersModule implements OnModuleInit {
+  private polling = false;
+
+  constructor(
+    private readonly syncWorkerService: SyncWorkerService,
+    private readonly config: ConfigService,
+  ) {}
+
+  onModuleInit() {
+    if (this.config.get<string>('WORKERS_ENABLED') !== 'true') {
+      return;
+    }
+    this.polling = true;
+    void this.pollLoop();
+  }
+
+  private async pollLoop(): Promise<void> {
+    while (this.polling) {
+      try {
+        const processed =
+          await this.syncWorkerService.processOnce('worker-inline');
+        if (!processed) {
+          await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS));
+        }
+      } catch {
+        await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS));
+      }
+    }
+  }
+}

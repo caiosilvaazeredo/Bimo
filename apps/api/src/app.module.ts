@@ -11,6 +11,11 @@ import { ProfessorModule } from './professor/professor.module';
 import { Professor } from './professor/professor.entity';
 import { ExternalAccount } from './professor/external-account.entity';
 import { AuthModule } from './auth/auth.module';
+import { SyncQueueModule } from './sync-queue/sync-queue.module';
+import { SyncJob } from './sync-queue/sync-job.entity';
+import { TurmaEspelhadaModule } from './turma-espelhada/turma-espelhada.module';
+import { TurmaEspelhada } from './turma-espelhada/turma-espelhada.entity';
+import { WorkersModule } from './workers/workers.module';
 
 @Module({
   imports: [
@@ -24,7 +29,7 @@ import { AuthModule } from './auth/auth.module';
         username: config.get<string>('DB_USERNAME'),
         password: config.get<string>('DB_PASSWORD'),
         serviceName: config.get<string>('DB_SERVICE_NAME'),
-        entities: [Tenant, Professor, ExternalAccount],
+        entities: [Tenant, Professor, ExternalAccount, SyncJob, TurmaEspelhada],
         synchronize: false,
         autoLoadEntities: true,
       }),
@@ -33,17 +38,27 @@ import { AuthModule } from './auth/auth.module';
     TenantModule,
     ProfessorModule,
     AuthModule,
+    SyncQueueModule,
+    TurmaEspelhadaModule,
+    WorkersModule,
   ],
   controllers: [AppController],
   providers: [AppService],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
-    // Rotas /auth/* resolvem o tenant pelo state do OAuth (ver auth/oauth-state.ts),
-    // não pelo header x-tenant-slug, então ficam fora do middleware global.
+    // Rotas /auth/* resolvem o tenant pelo state do OAuth (ver auth/oauth-state.ts).
+    // Rotas autenticadas por JWT (ex: /turmas-espelhadas) resolvem o tenant a
+    // partir do próprio token (ver *.controller.ts), não do header
+    // x-tenant-slug — por isso ambas ficam fora do middleware global.
     consumer
       .apply(TenantMiddleware)
-      .exclude('health', 'auth/(.*)')
+      .exclude(
+        'health',
+        'auth/(.*)',
+        'turmas-espelhadas',
+        'turmas-espelhadas/(.*)',
+      )
       .forRoutes('*');
   }
 }

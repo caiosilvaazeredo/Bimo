@@ -93,6 +93,16 @@ export class ExternalAccountsService {
     return this.repository.find({ where: { tenantId, professorId } });
   }
 
+  async findByProfessorAndProvider(
+    professorId: string,
+    provider: ExternalProvider,
+  ): Promise<ExternalAccount | null> {
+    const tenantId = TenantContext.getTenantId();
+    return this.repository.findOne({
+      where: { tenantId, professorId, provider },
+    });
+  }
+
   async hasProvider(
     professorId: string,
     provider: ExternalProvider,
