@@ -1,0 +1,6 @@
+/** Papéis de RBAC (RNF-SEC-03). */
+export enum ProfessorRole {
+  PROFESSOR = 'PROFESSOR',
+  INSTITUTIONAL_ADMIN = 'INSTITUTIONAL_ADMIN',
+  NETWORK_ADMIN = 'NETWORK_ADMIN',
+}
