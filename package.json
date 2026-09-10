@@ -1,0 +1,16 @@
+{
+  "name": "bimo",
+  "version": "0.0.1",
+  "private": true,
+  "workspaces": [
+    "apps/api",
+    "apps/web"
+  ],
+  "scripts": {
+    "build": "npm run build --workspace apps/api && npm run build --workspace apps/web",
+    "lint": "npm run lint --workspace apps/api && npm run lint --workspace apps/web",
+    "test": "npm test --workspace apps/api",
+    "dev:api": "npm run start:dev --workspace apps/api",
+    "dev:web": "npm run dev --workspace apps/web"
+  }
+}
