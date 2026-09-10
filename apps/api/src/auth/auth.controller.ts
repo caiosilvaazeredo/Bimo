@@ -1,13 +1,6 @@
-import {
-  Controller,
-  Delete,
-  Get,
-  Param,
-  ParseEnumPipe,
-  Req,
-  UseGuards,
-} from '@nestjs/common';
-import { Request } from 'express';
+import { Controller, Delete, Get, Param, ParseEnumPipe, Req, Res, UseGuards } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { Request, Response } from 'express';
 import { GoogleAuthGuard, MicrosoftAuthGuard } from './guards/oauth-init.guard';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { AuthService } from './auth.service';
@@ -18,7 +11,10 @@ import { TenantContext } from '../tenant/tenant-context';
 
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly config: ConfigService,
+  ) {}
 
   /** Inicia o login Google. Uso: GET /auth/google?tenant=<slug> */
   @Get('google')
@@ -29,11 +25,9 @@ export class AuthController {
 
   @Get('google/callback')
   @UseGuards(GoogleAuthGuard)
-  async googleCallback(@Req() req: Request & { user: OAuthProfile }) {
-    return this.authService.completeOAuthLogin(
-      req.user,
-      ExternalProvider.GOOGLE,
-    );
+  async googleCallback(@Req() req: Request & { user: OAuthProfile }, @Res() res: Response) {
+    const result = await this.authService.completeOAuthLogin(req.user, ExternalProvider.GOOGLE);
+    this.redirectToFrontend(res, result.accessToken);
   }
 
   /** Inicia o login Microsoft. Uso: GET /auth/microsoft?tenant=<slug> */
@@ -45,23 +39,24 @@ export class AuthController {
 
   @Get('microsoft/callback')
   @UseGuards(MicrosoftAuthGuard)
-  async microsoftCallback(@Req() req: Request & { user: OAuthProfile }) {
-    return this.authService.completeOAuthLogin(
-      req.user,
-      ExternalProvider.MICROSOFT,
-    );
+  async microsoftCallback(@Req() req: Request & { user: OAuthProfile }, @Res() res: Response) {
+    const result = await this.authService.completeOAuthLogin(req.user, ExternalProvider.MICROSOFT);
+    this.redirectToFrontend(res, result.accessToken);
   }
 
   @Delete('accounts/:provider')
   @UseGuards(JwtAuthGuard)
   async unlinkAccount(
     @Req() req: Request & { user: BimoJwtPayload },
-    @Param('provider', new ParseEnumPipe(ExternalProvider))
-    provider: ExternalProvider,
+    @Param('provider', new ParseEnumPipe(ExternalProvider)) provider: ExternalProvider,
   ) {
     const { sub: professorId, tenantId } = req.user;
-    return TenantContext.run({ tenantId }, () =>
-      this.authService.unlinkAccount(professorId, provider),
-    );
+    return TenantContext.run({ tenantId }, () => this.authService.unlinkAccount(professorId, provider));
+  }
+
+  /** Devolve o navegador para o painel Bimo com a sessão (JWT) na URL. */
+  private redirectToFrontend(res: Response, accessToken: string): void {
+    const frontendUrl = this.config.get<string>('FRONTEND_URL') ?? 'http://localhost:3001';
+    res.redirect(`${frontendUrl}/auth/callback?token=${encodeURIComponent(accessToken)}`);
   }
 }
