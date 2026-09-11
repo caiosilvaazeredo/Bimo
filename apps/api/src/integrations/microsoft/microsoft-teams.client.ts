@@ -18,6 +18,24 @@ interface GroupInfo {
   displayName: string;
 }
 
+export interface RosterMember {
+  email: string;
+  microsoftUserId: string;
+}
+
+export interface CreatedAssignment {
+  externalId: string;
+  webUrl: string | null;
+}
+
+export interface AssignmentInput {
+  title: string;
+  description?: string;
+  dueDateIso?: string | null;
+  points?: number | null;
+  materialLinks?: string[];
+}
+
 /**
  * Cliente do Microsoft Graph para Teams/Education. Isolado neste módulo
  * (RNF-ARCH-03): mudanças na API do Microsoft nunca devem exigir
@@ -25,6 +43,12 @@ interface GroupInfo {
  *
  * Criar um Team no Graph é uma operação em duas etapas: primeiro o grupo
  * Microsoft 365, depois o Team sobre esse grupo (RF-INT-02).
+ *
+ * Simplificação assumida (validar contra um tenant EDU real antes de
+ * produção): o id da "education class" usado para tarefas/assignments
+ * é o mesmo id do grupo/Team criado em createTeam. Em muitos tenants
+ * EDU a classe é provisionada junto com o grupo, mas isso não é
+ * garantido pela documentação pública do Graph.
  */
 @Injectable()
 export class MicrosoftTeamsClient {
@@ -49,22 +73,129 @@ export class MicrosoftTeamsClient {
     return (await response.json()) as GroupInfo;
   }
 
-  /** RF-MIG-03: roster do grupo, para reconciliar por e-mail. */
-  async listMemberEmails(
+  /** RF-MIG-03/RF-INT-03: roster do grupo, com o id do aluno no Graph (necessário para lançar nota). */
+  async listMembers(
     accessToken: string,
     groupId: string,
-  ): Promise<string[]> {
+  ): Promise<RosterMember[]> {
     const response = await this.request(
       accessToken,
       'GET',
       `${GRAPH_API_BASE}/groups/${groupId}/members`,
     );
     const body = (await response.json()) as {
-      value?: { mail?: string; userPrincipalName?: string }[];
+      value?: { id: string; mail?: string; userPrincipalName?: string }[];
     };
     return (body.value ?? [])
-      .map((member) => member.mail ?? member.userPrincipalName)
-      .filter((email): email is string => Boolean(email));
+      .map((member) => ({
+        email: member.mail ?? member.userPrincipalName,
+        microsoftUserId: member.id,
+      }))
+      .filter((m): m is RosterMember => Boolean(m.email && m.microsoftUserId));
+  }
+
+  /** RF-SYNC-01: publica a tarefa no Teams/Education. Materiais vão por link (RF-INT-04). */
+  async createAssignment(
+    accessToken: string,
+    classId: string,
+    input: AssignmentInput,
+  ): Promise<CreatedAssignment> {
+    const response = await this.request(
+      accessToken,
+      'POST',
+      `${GRAPH_API_BASE}/education/classes/${classId}/assignments`,
+      {
+        displayName: input.title,
+        instructions: input.description
+          ? { contentType: 'text', content: input.description }
+          : undefined,
+        dueDateTime: input.dueDateIso ?? undefined,
+        grading: input.points
+          ? {
+              '@odata.type':
+                '#microsoft.graph.educationAssignmentPointsGradeType',
+              maxPoints: input.points,
+            }
+          : undefined,
+        resources: (input.materialLinks ?? []).map((link) => ({
+          '@odata.type': '#microsoft.graph.educationLinkResource',
+          link,
+          displayName: link,
+        })),
+      },
+    );
+    const body = (await response.json()) as { id: string; webUrl?: string };
+
+    await this.request(
+      accessToken,
+      'POST',
+      `${GRAPH_API_BASE}/education/classes/${classId}/assignments/${body.id}/publish`,
+    );
+
+    return { externalId: body.id, webUrl: body.webUrl ?? null };
+  }
+
+  /** RF-SYNC-02: edita a tarefa já publicada, preservando entregas/notas já lançadas. */
+  async updateAssignment(
+    accessToken: string,
+    classId: string,
+    assignmentId: string,
+    input: AssignmentInput,
+  ): Promise<void> {
+    await this.request(
+      accessToken,
+      'PATCH',
+      `${GRAPH_API_BASE}/education/classes/${classId}/assignments/${assignmentId}`,
+      {
+        displayName: input.title,
+        instructions: input.description
+          ? { contentType: 'text', content: input.description }
+          : undefined,
+        dueDateTime: input.dueDateIso ?? undefined,
+      },
+    );
+  }
+
+  /**
+   * RF-SYNC-04: lança a nota do aluno. Cada assignment tem uma submission
+   * por aluno criada automaticamente; é preciso achar a dele antes de
+   * poder aplicar a nota.
+   */
+  async setGrade(
+    accessToken: string,
+    classId: string,
+    assignmentId: string,
+    microsoftUserId: string,
+    grade: number,
+  ): Promise<void> {
+    const listResponse = await this.request(
+      accessToken,
+      'GET',
+      `${GRAPH_API_BASE}/education/classes/${classId}/assignments/${assignmentId}/submissions`,
+    );
+    const body = (await listResponse.json()) as {
+      value?: { id: string; recipient?: { userId?: string } }[];
+    };
+    const submission = (body.value ?? []).find(
+      (s) => s.recipient?.userId === microsoftUserId,
+    );
+    if (!submission) {
+      throw new Error(
+        `Nenhuma submission encontrada para userId=${microsoftUserId} na tarefa ${assignmentId}`,
+      );
+    }
+
+    await this.request(
+      accessToken,
+      'PATCH',
+      `${GRAPH_API_BASE}/education/classes/${classId}/assignments/${assignmentId}/submissions/${submission.id}`,
+      {
+        grade: {
+          '@odata.type': '#microsoft.graph.educationAssignmentPointsGrade',
+          points: grade,
+        },
+      },
+    );
   }
 
   private async createGroup(
@@ -102,7 +233,7 @@ export class MicrosoftTeamsClient {
 
   private async request(
     accessToken: string,
-    method: 'GET' | 'POST',
+    method: 'GET' | 'POST' | 'PATCH',
     url: string,
     body?: unknown,
   ): Promise<Response> {

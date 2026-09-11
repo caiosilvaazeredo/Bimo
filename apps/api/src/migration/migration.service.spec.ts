@@ -17,11 +17,11 @@ describe('MigrationService', () => {
   };
   const googleClassroomClient = {
     getCourse: jest.fn(),
-    listStudentEmails: jest.fn(),
+    listStudents: jest.fn(),
   };
   const microsoftTeamsClient = {
     getGroup: jest.fn(),
-    listMemberEmails: jest.fn(),
+    listMembers: jest.fn(),
   };
   const syncQueueService = { enqueue: jest.fn().mockResolvedValue(undefined) };
   const alunosService = { findOrCreateByInstitutionalEmail: jest.fn() };
@@ -149,13 +149,13 @@ describe('MigrationService', () => {
       googleCourseId: 'c1',
       microsoftTeamId: 't1',
     });
-    googleClassroomClient.listStudentEmails.mockResolvedValue([
-      'a@escola.edu.br',
-      'b@escola.edu.br',
+    googleClassroomClient.listStudents.mockResolvedValue([
+      { email: 'a@escola.edu.br', googleUserId: 'g-a' },
+      { email: 'b@escola.edu.br', googleUserId: 'g-b' },
     ]);
-    microsoftTeamsClient.listMemberEmails.mockResolvedValue([
-      'b@escola.edu.br',
-      'c@escola.edu.br',
+    microsoftTeamsClient.listMembers.mockResolvedValue([
+      { email: 'b@escola.edu.br', microsoftUserId: 'm-b' },
+      { email: 'c@escola.edu.br', microsoftUserId: 'm-c' },
     ]);
 
     const result = await withTenant(() =>

@@ -113,7 +113,7 @@ export class MigrationService {
   ): Promise<RosterReconciliation> {
     const turma = await this.turmaEspelhadaService.findById(turmaId);
 
-    const [googleEmails, microsoftEmails] = await Promise.all([
+    const [googleStudents, microsoftMembers] = await Promise.all([
       turma.googleCourseId
         ? this.fetchGoogleRoster(professorId, turma.googleCourseId)
         : Promise.resolve([]),
@@ -122,9 +122,16 @@ export class MigrationService {
         : Promise.resolve([]),
     ]);
 
-    const googleSet = new Set(googleEmails.map((e) => e.toLowerCase()));
-    const microsoftSet = new Set(microsoftEmails.map((e) => e.toLowerCase()));
-    const allEmails = new Set([...googleSet, ...microsoftSet]);
+    const googleByEmail = new Map(
+      googleStudents.map((s) => [s.email.toLowerCase(), s.googleUserId]),
+    );
+    const microsoftByEmail = new Map(
+      microsoftMembers.map((m) => [m.email.toLowerCase(), m.microsoftUserId]),
+    );
+    const allEmails = new Set([
+      ...googleByEmail.keys(),
+      ...microsoftByEmail.keys(),
+    ]);
 
     const result: RosterReconciliation = {
       onlyGoogle: [],
@@ -133,11 +140,11 @@ export class MigrationService {
     };
 
     for (const email of allEmails) {
-      const inGoogle = googleSet.has(email);
-      const inMicrosoft = microsoftSet.has(email);
-      if (inGoogle && inMicrosoft) {
+      const googleUserId = googleByEmail.get(email) ?? null;
+      const microsoftUserId = microsoftByEmail.get(email) ?? null;
+      if (googleUserId && microsoftUserId) {
         result.both.push(email);
-      } else if (inGoogle) {
+      } else if (googleUserId) {
         result.onlyGoogle.push(email);
       } else {
         result.onlyMicrosoft.push(email);
@@ -147,7 +154,10 @@ export class MigrationService {
         institutionalEmail: email,
         displayName: email,
       });
-      await this.matriculaService.enroll(aluno.id, turma.id);
+      await this.matriculaService.enroll(aluno.id, turma.id, {
+        googleUserId,
+        microsoftUserId,
+      });
     }
 
     return result;
@@ -189,20 +199,14 @@ export class MigrationService {
     return group.displayName;
   }
 
-  private async fetchGoogleRoster(
-    professorId: string,
-    courseId: string,
-  ): Promise<string[]> {
+  private async fetchGoogleRoster(professorId: string, courseId: string) {
     const token = await this.googleAccessToken(professorId);
-    return this.googleClassroomClient.listStudentEmails(token, courseId);
+    return this.googleClassroomClient.listStudents(token, courseId);
   }
 
-  private async fetchMicrosoftRoster(
-    professorId: string,
-    groupId: string,
-  ): Promise<string[]> {
+  private async fetchMicrosoftRoster(professorId: string, groupId: string) {
     const token = await this.microsoftAccessToken(professorId);
-    return this.microsoftTeamsClient.listMemberEmails(token, groupId);
+    return this.microsoftTeamsClient.listMembers(token, groupId);
   }
 
   private async googleAccessToken(professorId: string): Promise<string> {

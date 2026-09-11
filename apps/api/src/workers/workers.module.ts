@@ -11,6 +11,9 @@ import {
   CreateMissingGoogleCourseHandler,
   CreateMissingMicrosoftTeamHandler,
 } from '../migration/create-missing-side.handlers';
+import { CourseworkModule } from '../coursework/coursework.module';
+import { PublishCourseworkHandler } from '../coursework/publish-coursework.handler';
+import { UpdateCourseworkHandler } from '../coursework/update-coursework.handler';
 
 const POLL_INTERVAL_MS = 5_000;
 
@@ -29,6 +32,7 @@ const POLL_INTERVAL_MS = 5_000;
     SyncEventLogModule,
     TurmaEspelhadaModule,
     MigrationModule,
+    CourseworkModule,
   ],
   providers: [
     SyncWorkerService,
@@ -38,15 +42,21 @@ const POLL_INTERVAL_MS = 5_000;
         createTurmaHandler: CreateTurmaEspelhadaHandler,
         createMissingTeamHandler: CreateMissingMicrosoftTeamHandler,
         createMissingCourseHandler: CreateMissingGoogleCourseHandler,
+        publishCourseworkHandler: PublishCourseworkHandler,
+        updateCourseworkHandler: UpdateCourseworkHandler,
       ) => [
         createTurmaHandler,
         createMissingTeamHandler,
         createMissingCourseHandler,
+        publishCourseworkHandler,
+        updateCourseworkHandler,
       ],
       inject: [
         CreateTurmaEspelhadaHandler,
         CreateMissingMicrosoftTeamHandler,
         CreateMissingGoogleCourseHandler,
+        PublishCourseworkHandler,
+        UpdateCourseworkHandler,
       ],
     },
   ],

@@ -22,6 +22,13 @@ export class Matricula {
   @Column({ name: 'turma_espelhada_id' })
   turmaEspelhadaId: string;
 
+  /** Id do aluno no Google/Microsoft, necessário para lançar nota nas plataformas (RF-SYNC-04). */
+  @Column({ name: 'google_user_id', nullable: true })
+  googleUserId: string | null;
+
+  @Column({ name: 'microsoft_user_id', nullable: true })
+  microsoftUserId: string | null;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 }

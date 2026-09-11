@@ -31,10 +31,14 @@ import { MigrationModule } from './migration/migration.module';
 import { AdminModule } from './admin/admin.module';
 import { BillingModule } from './billing/billing.module';
 import { PrivacyModule } from './privacy/privacy.module';
+import { CourseworkModule } from './coursework/coursework.module';
+import { Tarefa } from './coursework/tarefa.entity';
 
 const JWT_SCOPED_ROUTES = [
   'turmas-espelhadas',
   'turmas-espelhadas/(.*)',
+  'tarefas',
+  'tarefas/(.*)',
   'conflicts',
   'conflicts/(.*)',
   'notifications',
@@ -80,6 +84,7 @@ const NO_TENANT_ROUTES = ['admin/tenants'];
           Aluno,
           Matricula,
           EntregaContingencia,
+          Tarefa,
         ],
         synchronize: false,
         autoLoadEntities: true,
@@ -100,6 +105,7 @@ const NO_TENANT_ROUTES = ['admin/tenants'];
     AdminModule,
     BillingModule,
     PrivacyModule,
+    CourseworkModule,
     WorkersModule,
   ],
   controllers: [AppController],
