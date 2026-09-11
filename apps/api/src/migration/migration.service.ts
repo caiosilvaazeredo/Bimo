@@ -31,6 +31,10 @@ export interface RosterReconciliation {
   both: string[];
 }
 
+export type LinkExistingBatchResult =
+  | { input: LinkExistingInput; ok: true; turma: TurmaEspelhada }
+  | { input: LinkExistingInput; ok: false; error: string };
+
 @Injectable()
 export class MigrationService {
   constructor(
@@ -104,6 +108,29 @@ export class MigrationService {
     }
 
     return turma;
+  }
+
+  /**
+   * RF-MIG-06: vincula várias turmas existentes de uma vez (ex: todas as
+   * turmas do professor no início do semestre), reaproveitando linkExisting
+   * item a item. Sequencial (não em paralelo) para não estourar rate limit
+   * das duas APIs de uma vez com N turmas. Uma turma que falha (ex: id
+   * inválido, falta confirmedSameClass) não interrompe as demais — cada
+   * item do lote volta com seu próprio resultado (ok/erro), nunca lança.
+   */
+  async linkExistingBatch(
+    inputs: LinkExistingInput[],
+  ): Promise<LinkExistingBatchResult[]> {
+    const results: LinkExistingBatchResult[] = [];
+    for (const input of inputs) {
+      try {
+        const turma = await this.linkExisting(input);
+        results.push({ input, ok: true, turma });
+      } catch (error) {
+        results.push({ input, ok: false, error: (error as Error).message });
+      }
+    }
+    return results;
   }
 
   /**

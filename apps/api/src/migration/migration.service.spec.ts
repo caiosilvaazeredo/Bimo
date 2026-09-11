@@ -285,4 +285,39 @@ describe('MigrationService', () => {
 
     expect(notaService.setGrade).not.toHaveBeenCalled();
   });
+
+  describe('linkExistingBatch (RF-MIG-06)', () => {
+    it('vincula cada turma do lote e retorna um resultado por item, sem interromper no primeiro erro', async () => {
+      turmaEspelhadaService.findByGoogleCourseId.mockImplementation(
+        async (id: string) => (id === 'c-existente' ? { id: 'turma-x' } : null),
+      );
+      turmaEspelhadaService.findByMicrosoftTeamId.mockResolvedValue(null);
+      googleClassroomClient.getCourse.mockResolvedValue({ name: 'Turma Nova' });
+      turmaEspelhadaService.createLinked.mockResolvedValue({
+        id: 'turma-nova',
+        name: 'Turma Nova',
+      });
+
+      const results = await withTenant(() =>
+        service.linkExistingBatch([
+          { professorId: 'prof-1' }, // inválido: nenhum id informado
+          { professorId: 'prof-1', googleCourseId: 'c-existente' }, // idempotente
+          { professorId: 'prof-1', googleCourseId: 'c-nova' }, // cria nova
+        ]),
+      );
+
+      expect(results).toHaveLength(3);
+      expect(results[0]).toMatchObject({ ok: false });
+      expect((results[0] as any).error).toMatch(/Informe ao menos um id/);
+      expect(results[1]).toMatchObject({
+        ok: true,
+        turma: { id: 'turma-x' },
+      });
+      expect(results[2]).toMatchObject({
+        ok: true,
+        turma: { id: 'turma-nova' },
+      });
+      expect(turmaEspelhadaService.createLinked).toHaveBeenCalledTimes(1);
+    });
+  });
 });

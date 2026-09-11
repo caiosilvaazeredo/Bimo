@@ -29,6 +29,22 @@ export class MigrationController {
     );
   }
 
+  /** RF-MIG-06: vincula várias turmas existentes de uma vez. */
+  @Post('turmas-existentes/lote')
+  async linkExistingBatch(
+    @Req() req: Request & { user: BimoJwtPayload },
+    @Body() dto: { turmas: LinkExistingDto[] },
+  ) {
+    const { sub: professorId, tenantId } = req.user;
+    const inputs: LinkExistingInput[] = (dto.turmas ?? []).map((item) => ({
+      professorId,
+      ...item,
+    }));
+    return TenantContext.run({ tenantId }, () =>
+      this.migrationService.linkExistingBatch(inputs),
+    );
+  }
+
   @Post('turmas-existentes/:turmaId/roster')
   async reconcileRoster(
     @Req() req: Request & { user: BimoJwtPayload },

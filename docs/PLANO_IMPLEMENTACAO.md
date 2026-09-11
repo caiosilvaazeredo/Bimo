@@ -133,7 +133,7 @@ O DoD global da v1 é o da seção 9 do documento de requisitos.
 ## 7. Status de implementação (código em `apps/api` e `apps/web`)
 
 As Fases 0-9 têm uma primeira implementação no branch `claude/pensive-dijkstra-3s3dva`,
-com build, lint e 120 testes unitários passando a cada commit. Resumo do que está
+com build, lint e 121 testes unitários passando a cada commit. Resumo do que está
 implementado de fato versus o que ficou simplificado ou pendente:
 
 **Completo**: Fase 0 (monorepo, CI, multi-tenancy), Fase 1 (RF-AUTH-01 a 04, RBAC/JWT —
@@ -189,8 +189,19 @@ segue não implementado, pelo motivo acima. A API de nota do Microsoft Graph
 `listAssignmentSubmissions`) foi implementada com base no formato documentado
 publicamente, mas nunca testada contra um tenant EDU real — validar antes de
 produção, junto com a suposição de que o id da education class é o mesmo id do
-grupo/Team criado. RF-MIG-06 (migração em lote, Could) continua fora do escopo
-implementado.
+grupo/Team criado.
+
+**Atualização RF-MIG-06**: migração em lote implementada via
+`MigrationService.linkExistingBatch` (`POST /migrations/turmas-existentes/lote`,
+corpo `{ turmas: [...] }` no mesmo formato de cada item de
+`POST /migrations/turmas-existentes`). Roda sequencialmente (não em paralelo,
+para não estourar rate limit das duas APIs de uma vez com N turmas) e reaproveita
+`linkExisting` item a item — uma turma que falha (id inválido, falta
+`confirmedSameClass` quando os dois lados existem) não interrompe as demais;
+cada item do lote volta com seu próprio resultado (`ok: true` + turma, ou
+`ok: false` + mensagem de erro). Não inclui roster/histórico em lote (esses
+continuam por turma, via os endpoints já existentes de `/roster` e
+`/historico`) — escopo do requisito original era só o vínculo em si.
 
 **Atualização RNF-UX-01**: primeira rodada de correções de acessibilidade nas
 4 páginas do painel (`/`, `/login`, `/turmas`, `/auth/callback`). Trocados os
