@@ -13,9 +13,24 @@ import { ExternalAccount } from './professor/external-account.entity';
 import { AuthModule } from './auth/auth.module';
 import { SyncQueueModule } from './sync-queue/sync-queue.module';
 import { SyncJob } from './sync-queue/sync-job.entity';
+import { SyncEventLogModule } from './sync-event-log/sync-event-log.module';
+import { SyncEventLog } from './sync-event-log/sync-event-log.entity';
 import { TurmaEspelhadaModule } from './turma-espelhada/turma-espelhada.module';
 import { TurmaEspelhada } from './turma-espelhada/turma-espelhada.entity';
 import { WorkersModule } from './workers/workers.module';
+import { ConflictModule } from './conflict/conflict.module';
+import { SyncConflict } from './conflict/sync-conflict.entity';
+import { NotificationsModule } from './notifications/notifications.module';
+import { Notification } from './notifications/notification.entity';
+
+const JWT_SCOPED_ROUTES = [
+  'turmas-espelhadas',
+  'turmas-espelhadas/(.*)',
+  'conflicts',
+  'conflicts/(.*)',
+  'notifications',
+  'notifications/(.*)',
+];
 
 @Module({
   imports: [
@@ -29,7 +44,16 @@ import { WorkersModule } from './workers/workers.module';
         username: config.get<string>('DB_USERNAME'),
         password: config.get<string>('DB_PASSWORD'),
         serviceName: config.get<string>('DB_SERVICE_NAME'),
-        entities: [Tenant, Professor, ExternalAccount, SyncJob, TurmaEspelhada],
+        entities: [
+          Tenant,
+          Professor,
+          ExternalAccount,
+          SyncJob,
+          SyncEventLog,
+          TurmaEspelhada,
+          SyncConflict,
+          Notification,
+        ],
         synchronize: false,
         autoLoadEntities: true,
       }),
@@ -39,7 +63,10 @@ import { WorkersModule } from './workers/workers.module';
     ProfessorModule,
     AuthModule,
     SyncQueueModule,
+    SyncEventLogModule,
     TurmaEspelhadaModule,
+    ConflictModule,
+    NotificationsModule,
     WorkersModule,
   ],
   controllers: [AppController],
@@ -48,17 +75,12 @@ import { WorkersModule } from './workers/workers.module';
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
     // Rotas /auth/* resolvem o tenant pelo state do OAuth (ver auth/oauth-state.ts).
-    // Rotas autenticadas por JWT (ex: /turmas-espelhadas) resolvem o tenant a
-    // partir do próprio token (ver *.controller.ts), não do header
-    // x-tenant-slug — por isso ambas ficam fora do middleware global.
+    // Rotas autenticadas por JWT resolvem o tenant a partir do próprio token
+    // (ver *.controller.ts), não do header x-tenant-slug — por isso ambas
+    // ficam fora do middleware global.
     consumer
       .apply(TenantMiddleware)
-      .exclude(
-        'health',
-        'auth/(.*)',
-        'turmas-espelhadas',
-        'turmas-espelhadas/(.*)',
-      )
+      .exclude('health', 'auth/(.*)', ...JWT_SCOPED_ROUTES)
       .forRoutes('*');
   }
 }

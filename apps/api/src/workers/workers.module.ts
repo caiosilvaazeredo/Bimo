@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { SyncQueueModule } from '../sync-queue/sync-queue.module';
 import { SyncWorkerService } from '../sync-queue/sync-worker.service';
 import { SYNC_JOB_HANDLERS } from '../sync-queue/sync-job-handler';
+import { SyncEventLogModule } from '../sync-event-log/sync-event-log.module';
 import { TurmaEspelhadaModule } from '../turma-espelhada/turma-espelhada.module';
 import { CreateTurmaEspelhadaHandler } from '../turma-espelhada/create-turma-espelhada.handler';
 
@@ -18,7 +19,7 @@ const POLL_INTERVAL_MS = 5_000;
  * bater no banco fora de um ambiente real.
  */
 @Module({
-  imports: [SyncQueueModule, TurmaEspelhadaModule],
+  imports: [SyncQueueModule, SyncEventLogModule, TurmaEspelhadaModule],
   providers: [
     SyncWorkerService,
     {

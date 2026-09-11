@@ -78,6 +78,6 @@ export class TokenRefreshService {
     provider: ExternalProvider,
   ): Promise<void> {
     await this.externalAccountsService.markNeedsReauth(accountId);
-    this.notificationsService.notifyReauthRequired(professorId, provider);
+    await this.notificationsService.notifyReauthRequired(professorId, provider);
   }
 }

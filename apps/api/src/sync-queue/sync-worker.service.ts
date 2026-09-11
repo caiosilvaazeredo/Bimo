@@ -2,6 +2,7 @@ import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
 import { TenantContext } from '../tenant/tenant-context';
 import { SyncQueueService } from './sync-queue.service';
 import { SYNC_JOB_HANDLERS, SyncJobHandler } from './sync-job-handler';
+import { SyncEventLogService } from '../sync-event-log/sync-event-log.service';
 
 /**
  * Processa um job por vez da fila de sincronização, despachando por
@@ -9,6 +10,8 @@ import { SYNC_JOB_HANDLERS, SyncJobHandler } from './sync-job-handler';
  * desacoplado do painel web). Cada chamada roda dentro do TenantContext
  * do próprio job, para que os serviços de domínio não precisem saber
  * que estão sendo chamados por um worker em vez de uma requisição HTTP.
+ * Toda tentativa (sucesso ou falha) vira um evento no log de auditoria
+ * (RF-SYNC-05, RNF-OBS-01).
  */
 @Injectable()
 export class SyncWorkerService {
@@ -18,6 +21,7 @@ export class SyncWorkerService {
   constructor(
     @Optional() @Inject(SYNC_JOB_HANDLERS) handlers: SyncJobHandler[] = [],
     private readonly syncQueueService: SyncQueueService,
+    private readonly syncEventLogService: SyncEventLogService,
   ) {
     this.handlersByType = new Map(
       handlers.map((handler) => [handler.jobType, handler]),
@@ -43,11 +47,22 @@ export class SyncWorkerService {
         handler.handle(JSON.parse(job.payload)),
       );
       await this.syncQueueService.complete(job.id);
+      await this.syncEventLogService.record({
+        tenantId: job.tenantId,
+        jobType: job.jobType,
+        result: 'SUCCESS',
+      });
     } catch (error) {
       this.logger.error(
         `Job ${job.id} (${job.jobType}, tenant=${job.tenantId}) falhou: ${(error as Error).message}`,
       );
       await this.syncQueueService.fail(job.id, error as Error);
+      await this.syncEventLogService.record({
+        tenantId: job.tenantId,
+        jobType: job.jobType,
+        result: 'FAILURE',
+        detail: (error as Error).message,
+      });
     }
 
     return true;

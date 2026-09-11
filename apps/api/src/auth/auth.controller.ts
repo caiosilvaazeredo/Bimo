@@ -1,4 +1,13 @@
-import { Controller, Delete, Get, Param, ParseEnumPipe, Req, Res, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Delete,
+  Get,
+  Param,
+  ParseEnumPipe,
+  Req,
+  Res,
+  UseGuards,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Request, Response } from 'express';
 import { GoogleAuthGuard, MicrosoftAuthGuard } from './guards/oauth-init.guard';
@@ -25,8 +34,14 @@ export class AuthController {
 
   @Get('google/callback')
   @UseGuards(GoogleAuthGuard)
-  async googleCallback(@Req() req: Request & { user: OAuthProfile }, @Res() res: Response) {
-    const result = await this.authService.completeOAuthLogin(req.user, ExternalProvider.GOOGLE);
+  async googleCallback(
+    @Req() req: Request & { user: OAuthProfile },
+    @Res() res: Response,
+  ) {
+    const result = await this.authService.completeOAuthLogin(
+      req.user,
+      ExternalProvider.GOOGLE,
+    );
     this.redirectToFrontend(res, result.accessToken);
   }
 
@@ -39,8 +54,14 @@ export class AuthController {
 
   @Get('microsoft/callback')
   @UseGuards(MicrosoftAuthGuard)
-  async microsoftCallback(@Req() req: Request & { user: OAuthProfile }, @Res() res: Response) {
-    const result = await this.authService.completeOAuthLogin(req.user, ExternalProvider.MICROSOFT);
+  async microsoftCallback(
+    @Req() req: Request & { user: OAuthProfile },
+    @Res() res: Response,
+  ) {
+    const result = await this.authService.completeOAuthLogin(
+      req.user,
+      ExternalProvider.MICROSOFT,
+    );
     this.redirectToFrontend(res, result.accessToken);
   }
 
@@ -48,15 +69,21 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   async unlinkAccount(
     @Req() req: Request & { user: BimoJwtPayload },
-    @Param('provider', new ParseEnumPipe(ExternalProvider)) provider: ExternalProvider,
+    @Param('provider', new ParseEnumPipe(ExternalProvider))
+    provider: ExternalProvider,
   ) {
     const { sub: professorId, tenantId } = req.user;
-    return TenantContext.run({ tenantId }, () => this.authService.unlinkAccount(professorId, provider));
+    return TenantContext.run({ tenantId }, () =>
+      this.authService.unlinkAccount(professorId, provider),
+    );
   }
 
   /** Devolve o navegador para o painel Bimo com a sessão (JWT) na URL. */
   private redirectToFrontend(res: Response, accessToken: string): void {
-    const frontendUrl = this.config.get<string>('FRONTEND_URL') ?? 'http://localhost:3001';
-    res.redirect(`${frontendUrl}/auth/callback?token=${encodeURIComponent(accessToken)}`);
+    const frontendUrl =
+      this.config.get<string>('FRONTEND_URL') ?? 'http://localhost:3001';
+    res.redirect(
+      `${frontendUrl}/auth/callback?token=${encodeURIComponent(accessToken)}`,
+    );
   }
 }
