@@ -63,6 +63,15 @@ export class NotificationsService {
     );
   }
 
+  /** RF-DASH-06: resumo periódico das turmas do professor. */
+  async notifyPeriodicSummary(
+    professorId: string,
+    message: string,
+  ): Promise<void> {
+    this.logger.warn(`[e-mail] Resumo periódico (RF-DASH-06): ${message}`);
+    await this.create(professorId, NotificationKind.PERIODIC_SUMMARY, message);
+  }
+
   async listForRecipient(recipientId: string): Promise<Notification[]> {
     const tenantId = TenantContext.getTenantId();
     return this.repository.find({

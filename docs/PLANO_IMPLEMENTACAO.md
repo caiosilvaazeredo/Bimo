@@ -133,7 +133,7 @@ O DoD global da v1 é o da seção 9 do documento de requisitos.
 ## 7. Status de implementação (código em `apps/api` e `apps/web`)
 
 As Fases 0-9 têm uma primeira implementação no branch `claude/pensive-dijkstra-3s3dva`,
-com build, lint e 115 testes unitários passando a cada commit. Resumo do que está
+com build, lint e 120 testes unitários passando a cada commit. Resumo do que está
 implementado de fato versus o que ficou simplificado ou pendente:
 
 **Completo**: Fase 0 (monorepo, CI, multi-tenancy), Fase 1 (RF-AUTH-01 a 04, RBAC/JWT —
@@ -189,8 +189,23 @@ segue não implementado, pelo motivo acima. A API de nota do Microsoft Graph
 `listAssignmentSubmissions`) foi implementada com base no formato documentado
 publicamente, mas nunca testada contra um tenant EDU real — validar antes de
 produção, junto com a suposição de que o id da education class é o mesmo id do
-grupo/Team criado. RF-MIG-06 (migração em lote, Could) e RF-DASH-06 (resumo
-periódico no painel) continuam fora do escopo implementado.
+grupo/Team criado. RF-MIG-06 (migração em lote, Could) continua fora do escopo
+implementado.
+
+**Atualização RF-DASH-06**: resumo periódico semanal por professor
+implementado via `PeriodicSummaryService` (`apps/api/src/billing/`), usando
+`@nestjs/schedule` (`@Cron(CronExpression.EVERY_WEEK)`). Para cada tenant
+(`TenantsService.listAll`) e cada professor com pelo menos uma turma
+espelhada, agrega `ReportsService.turmaSummary` de todas as turmas do
+professor (total de turmas, tarefas publicadas, entregas pendentes) e envia
+via `NotificationsService.notifyPeriodicSummary` (mesmo padrão de
+notificação em painel + log `[e-mail]` das demais notificações). Mesmo
+padrão de opt-in do `WorkersModule`: só roda de fato quando
+`PERIODIC_SUMMARY_ENABLED=true` (variável nova no `.env.example`), para não
+bater no banco durante testes/CI. `generateForAllTenants`/`generateForTenant`
+ficam públicos para acionar sob demanda sem esperar o cron semanal. Uma
+falha ao gerar o resumo de um tenant é logada e não interrompe os demais
+tenants. 5 novos testes.
 
 **Atualização RF-DASH-05**: `TurmaEspelhada` agora grava `googleCourseUrl`
 (`alternateLink` do Classroom) e `microsoftTeamUrl` (`webUrl` retornado ao criar o

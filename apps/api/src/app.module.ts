@@ -1,6 +1,7 @@
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { ScheduleModule } from '@nestjs/schedule';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { TenantModule } from './tenant/tenant.module';
@@ -92,6 +93,7 @@ const NO_TENANT_ROUTES = ['admin/tenants'];
         autoLoadEntities: true,
       }),
     }),
+    ScheduleModule.forRoot(),
     CryptoModule,
     TenantModule,
     ProfessorModule,
