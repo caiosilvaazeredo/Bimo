@@ -133,7 +133,7 @@ O DoD global da v1 é o da seção 9 do documento de requisitos.
 ## 7. Status de implementação (código em `apps/api` e `apps/web`)
 
 As Fases 0-9 têm uma primeira implementação no branch `claude/pensive-dijkstra-3s3dva`,
-com build, lint e 110 testes unitários passando a cada commit. Resumo do que está
+com build, lint e 114 testes unitários passando a cada commit. Resumo do que está
 implementado de fato versus o que ficou simplificado ou pendente:
 
 **Completo**: Fase 0 (monorepo, CI, multi-tenancy), Fase 1 (RF-AUTH-01 a 04, RBAC/JWT —
@@ -170,10 +170,21 @@ unificado, então a comparação "via Classroom vs via Teams" do requisito origi
 aproximada pela origem da *tarefa* (qual(is) id(s) externo(s) ela tem), não por
 entrega individual rastreada por origem.
 
-**Pendente, e por quê**: RF-SYNC-03 (conflito) continua sem um gatilho real — o
-motor de conflito genérico já existe e está testado desde a Fase 4, mas nada hoje
-detecta uma edição divergente vinda de fora (isso exigiria polling ou webhooks das
-duas APIs, RF-INT-06, ainda não implementado). A API de nota do Microsoft Graph
+**Atualização RF-SYNC-03**: o motor de conflito genérico (Fase 4) agora tem um
+gatilho real: `CourseworkConflictCheckService.checkTarefa` (exposto em
+`POST /tarefas/:id/check-conflito`) busca o estado atual da tarefa nas duas
+plataformas (`GoogleClassroomClient.getCourseWork` / `MicrosoftTeamsClient.
+getAssignment`), compara título/descrição/data/pontos contra o que o Bimo publicou
+por último e, para cada campo divergente, registra um `SyncConflict` e marca a
+`Tarefa` como `CONFLICT`, notificando o professor. **Simplificação intencional**:
+a checagem é sob demanda (acionada pelo professor ou por uma chamada externa, ex.
+um cron futuro), não um listener automático de mudanças — RF-INT-06
+(webhooks/change notifications das duas APIs) continua não implementado, então uma
+edição divergente feita fora do Bimo só é detectada na próxima checagem, não em
+tempo real.
+
+**Pendente, e por quê**: RF-INT-06 (webhooks/change notifications em tempo real)
+segue não implementado, pelo motivo acima. A API de nota do Microsoft Graph
 (`MicrosoftTeamsClient.setGrade`/`createAssignment`/`listAssignments`/
 `listAssignmentSubmissions`) foi implementada com base no formato documentado
 publicamente, mas nunca testada contra um tenant EDU real — validar antes de

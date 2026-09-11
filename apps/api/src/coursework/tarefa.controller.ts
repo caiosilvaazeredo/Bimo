@@ -14,6 +14,7 @@ import { ProfessorOnlyGuard } from '../auth/guards/kind.guard';
 import { BimoJwtPayload } from '../auth/bimo-jwt-payload';
 import { TenantContext } from '../tenant/tenant-context';
 import { TarefaService, TarefaInput } from './tarefa.service';
+import { CourseworkConflictCheckService } from './coursework-conflict-check.service';
 
 interface TarefaDto {
   title: string;
@@ -36,7 +37,10 @@ function toInput(dto: TarefaDto): TarefaInput {
 @Controller()
 @UseGuards(JwtAuthGuard, ProfessorOnlyGuard)
 export class TarefaController {
-  constructor(private readonly tarefaService: TarefaService) {}
+  constructor(
+    private readonly tarefaService: TarefaService,
+    private readonly conflictCheckService: CourseworkConflictCheckService,
+  ) {}
 
   @Post('turmas-espelhadas/:turmaId/tarefas')
   async publish(
@@ -79,6 +83,18 @@ export class TarefaController {
     const { sub: professorId, tenantId } = req.user;
     return TenantContext.run({ tenantId }, () =>
       this.tarefaService.update(id, professorId, toInput(dto)),
+    );
+  }
+
+  /** RF-SYNC-03: checa sob demanda se Google e Microsoft divergiram (ver RF-INT-06). */
+  @Post('tarefas/:id/check-conflito')
+  async checkConflict(
+    @Req() req: Request & { user: BimoJwtPayload },
+    @Param('id') id: string,
+  ) {
+    const { sub: professorId, tenantId } = req.user;
+    return TenantContext.run({ tenantId }, () =>
+      this.conflictCheckService.checkTarefa(id, professorId),
     );
   }
 }

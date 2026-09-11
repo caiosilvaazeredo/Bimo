@@ -6,6 +6,8 @@ import { SyncQueueModule } from '../sync-queue/sync-queue.module';
 import { GoogleClassroomModule } from '../integrations/google/google-classroom.module';
 import { MicrosoftTeamsModule } from '../integrations/microsoft/microsoft-teams.module';
 import { AlunoModule } from '../aluno/aluno.module';
+import { ConflictModule } from '../conflict/conflict.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 import { Tarefa } from './tarefa.entity';
 import { Nota } from './nota.entity';
 import { TarefaService } from './tarefa.service';
@@ -15,6 +17,7 @@ import { NotaController } from './nota.controller';
 import { PublishCourseworkHandler } from './publish-coursework.handler';
 import { UpdateCourseworkHandler } from './update-coursework.handler';
 import { SyncGradeHandler } from './sync-grade.handler';
+import { CourseworkConflictCheckService } from './coursework-conflict-check.service';
 
 @Module({
   imports: [
@@ -25,6 +28,8 @@ import { SyncGradeHandler } from './sync-grade.handler';
     GoogleClassroomModule,
     MicrosoftTeamsModule,
     AlunoModule,
+    ConflictModule,
+    NotificationsModule,
   ],
   controllers: [TarefaController, NotaController],
   providers: [
@@ -33,6 +38,7 @@ import { SyncGradeHandler } from './sync-grade.handler';
     PublishCourseworkHandler,
     UpdateCourseworkHandler,
     SyncGradeHandler,
+    CourseworkConflictCheckService,
   ],
   exports: [
     TarefaService,
@@ -40,6 +46,7 @@ import { SyncGradeHandler } from './sync-grade.handler';
     PublishCourseworkHandler,
     UpdateCourseworkHandler,
     SyncGradeHandler,
+    CourseworkConflictCheckService,
   ],
 })
 export class CourseworkModule {}

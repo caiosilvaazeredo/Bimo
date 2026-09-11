@@ -260,6 +260,40 @@ export class GoogleClassroomClient {
     }));
   }
 
+  /** RF-SYNC-03: estado atual de uma tarefa específica, para checar divergência. */
+  async getCourseWork(
+    accessToken: string,
+    courseId: string,
+    courseWorkId: string,
+  ): Promise<ExistingCourseWork> {
+    const response = await this.request(
+      accessToken,
+      'GET',
+      `${CLASSROOM_API_BASE}/courses/${courseId}/courseWork/${courseWorkId}`,
+    );
+    const cw = (await response.json()) as {
+      id: string;
+      title: string;
+      description?: string;
+      maxPoints?: number;
+      dueDate?: { year: number; month: number; day: number };
+      dueTime?: { hours?: number; minutes?: number };
+      materials?: { link?: { url?: string } }[];
+    };
+    return {
+      externalId: cw.id,
+      title: cw.title,
+      description: cw.description ?? null,
+      dueDateIso: cw.dueDate
+        ? fromGoogleDateTime(cw.dueDate, cw.dueTime)
+        : null,
+      points: cw.maxPoints ?? null,
+      materialLinks: (cw.materials ?? [])
+        .map((m) => m.link?.url)
+        .filter((url): url is string => Boolean(url)),
+    };
+  }
+
   /** RF-MIG-02: entregas/notas já lançadas para essa tarefa (para migração). */
   async listSubmissions(
     accessToken: string,

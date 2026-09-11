@@ -245,6 +245,37 @@ export class MicrosoftTeamsClient {
     }));
   }
 
+  /** RF-SYNC-03: estado atual de uma tarefa específica, para checar divergência. */
+  async getAssignment(
+    accessToken: string,
+    classId: string,
+    assignmentId: string,
+  ): Promise<ExistingAssignment> {
+    const response = await this.request(
+      accessToken,
+      'GET',
+      `${GRAPH_API_BASE}/education/classes/${classId}/assignments/${assignmentId}`,
+    );
+    const a = (await response.json()) as {
+      id: string;
+      displayName: string;
+      instructions?: { content?: string };
+      dueDateTime?: string;
+      grading?: { maxPoints?: number };
+      resources?: { link?: string }[];
+    };
+    return {
+      externalId: a.id,
+      title: a.displayName,
+      description: a.instructions?.content ?? null,
+      dueDateIso: a.dueDateTime ?? null,
+      points: a.grading?.maxPoints ?? null,
+      materialLinks: (a.resources ?? [])
+        .map((r) => r.link)
+        .filter((link): link is string => Boolean(link)),
+    };
+  }
+
   /** RF-MIG-02: entregas/notas já lançadas para essa tarefa (para migração). */
   async listAssignmentSubmissions(
     accessToken: string,

@@ -145,6 +145,15 @@ export class TarefaService {
     );
   }
 
+  /** RF-SYNC-03: marca "dessincronizada" enquanto o conflito não é resolvido. */
+  async markConflict(id: string): Promise<void> {
+    const tenantId = TenantContext.getTenantId();
+    await this.repository.update(
+      { id, tenantId },
+      { syncStatus: SyncStatus.CONFLICT },
+    );
+  }
+
   async findByGoogleCourseWorkId(
     googleCourseWorkId: string,
   ): Promise<Tarefa | null> {
