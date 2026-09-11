@@ -133,7 +133,7 @@ O DoD global da v1 é o da seção 9 do documento de requisitos.
 ## 7. Status de implementação (código em `apps/api` e `apps/web`)
 
 As Fases 0-9 têm uma primeira implementação no branch `claude/pensive-dijkstra-3s3dva`,
-com build, lint e 121 testes unitários passando a cada commit. Resumo do que está
+com build, lint e 128 testes unitários passando a cada commit. Resumo do que está
 implementado de fato versus o que ficou simplificado ou pendente:
 
 **Completo**: Fase 0 (monorepo, CI, multi-tenancy), Fase 1 (RF-AUTH-01 a 04, RBAC/JWT —
@@ -202,6 +202,25 @@ cada item do lote volta com seu próprio resultado (`ok: true` + turma, ou
 `ok: false` + mensagem de erro). Não inclui roster/histórico em lote (esses
 continuam por turma, via os endpoints já existentes de `/roster` e
 `/historico`) — escopo do requisito original era só o vínculo em si.
+
+**Atualização RF-SYNC-06**: exclusão de tarefa implementada — era uma lacuna
+real (não existia nenhum caminho de delete para `Tarefa` até aqui).
+`TarefaService.requestDeletion(id, professorId, confirmed)` exige
+`confirmed === true` explícito (caso contrário `BadRequestException`, sem
+tocar em nada); quando confirmado, marca a tarefa como `DELETING` (novo
+valor em `SyncStatus`, compartilhado com `TurmaEspelhada`) e enfileira
+`DELETE_COURSEWORK_JOB`. `DeleteCourseworkHandler` propaga a exclusão só
+para o(s) lado(s) já publicado(s) (`GoogleClassroomClient.deleteCourseWork`
+/ `MicrosoftTeamsClient.deleteAssignment`, ambos novos) e marca `DELETED`
+(exclusão lógica — `TarefaService.listByTurma` já filtra tarefas `DELETED`
+das listagens, mas `findById` ainda encontra o registro para auditoria).
+Endpoint `DELETE /tarefas/:id` com corpo `{ confirm: true }`. Falha ao
+excluir em uma das plataformas marca `ERROR` (o professor pode tentar de
+novo) em vez de deixar a tarefa num estado indefinido. **Simplificação
+assumida** (documentada no client): o Graph pode recusar excluir um
+assignment já atribuído a alunos — não testado contra um tenant EDU real,
+tratado como falha de propagação igual a qualquer outro erro de API. 7
+testes novos (128 no total).
 
 **Atualização RNF-UX-01**: primeira rodada de correções de acessibilidade nas
 4 páginas do painel (`/`, `/login`, `/turmas`, `/auth/callback`). Trocados os

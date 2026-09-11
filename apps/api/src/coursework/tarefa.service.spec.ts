@@ -4,6 +4,7 @@ import {
   TarefaService,
   PUBLISH_COURSEWORK_JOB,
   UPDATE_COURSEWORK_JOB,
+  DELETE_COURSEWORK_JOB,
 } from './tarefa.service';
 import { SyncStatus } from '../turma-espelhada/sync-status.enum';
 
@@ -125,5 +126,65 @@ describe('TarefaService', () => {
     expect(updated.syncStatus).toBe(SyncStatus.SYNCED);
     expect(updated.googleCourseWorkId).toBe('cw1');
     expect(updated.microsoftAssignmentId).toBe('a1');
+  });
+
+  describe('requestDeletion / markDeleted (RF-SYNC-06)', () => {
+    it('recusa excluir sem confirmação explícita', async () => {
+      turmaEspelhadaService.findById.mockResolvedValue({
+        id: 'turma-1',
+        syncStatus: SyncStatus.SYNCED,
+      });
+      const tarefa = await withTenant(() =>
+        service.publish('turma-1', 'prof-1', { title: 'Tarefa 1' }),
+      );
+
+      await expect(
+        withTenant(() => service.requestDeletion(tarefa.id, 'prof-1', false)),
+      ).rejects.toBeInstanceOf(BadRequestException);
+      expect(syncQueueService.enqueue).not.toHaveBeenCalledWith(
+        TENANT,
+        DELETE_COURSEWORK_JOB,
+        expect.anything(),
+      );
+    });
+
+    it('marca DELETING e enfileira o job quando confirmado', async () => {
+      turmaEspelhadaService.findById.mockResolvedValue({
+        id: 'turma-1',
+        syncStatus: SyncStatus.SYNCED,
+      });
+      const tarefa = await withTenant(() =>
+        service.publish('turma-1', 'prof-1', { title: 'Tarefa 1' }),
+      );
+
+      const result = await withTenant(() =>
+        service.requestDeletion(tarefa.id, 'prof-1', true),
+      );
+
+      expect(result.syncStatus).toBe(SyncStatus.DELETING);
+      expect(syncQueueService.enqueue).toHaveBeenCalledWith(
+        TENANT,
+        DELETE_COURSEWORK_JOB,
+        expect.objectContaining({ tarefaId: tarefa.id, professorId: 'prof-1' }),
+      );
+    });
+
+    it('markDeleted marca DELETED e some de listByTurma', async () => {
+      turmaEspelhadaService.findById.mockResolvedValue({
+        id: 'turma-1',
+        syncStatus: SyncStatus.SYNCED,
+      });
+      const tarefa = await withTenant(() =>
+        service.publish('turma-1', 'prof-1', { title: 'Tarefa 1' }),
+      );
+
+      await withTenant(() => service.markDeleted(tarefa.id));
+
+      const listed = await withTenant(() => service.listByTurma('turma-1'));
+      expect(listed.find((t) => t.id === tarefa.id)).toBeUndefined();
+      expect(repository._store.get(tarefa.id).syncStatus).toBe(
+        SyncStatus.DELETED,
+      );
+    });
   });
 });

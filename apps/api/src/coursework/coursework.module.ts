@@ -16,6 +16,7 @@ import { TarefaController } from './tarefa.controller';
 import { NotaController } from './nota.controller';
 import { PublishCourseworkHandler } from './publish-coursework.handler';
 import { UpdateCourseworkHandler } from './update-coursework.handler';
+import { DeleteCourseworkHandler } from './delete-coursework.handler';
 import { SyncGradeHandler } from './sync-grade.handler';
 import { CourseworkConflictCheckService } from './coursework-conflict-check.service';
 
@@ -37,6 +38,7 @@ import { CourseworkConflictCheckService } from './coursework-conflict-check.serv
     NotaService,
     PublishCourseworkHandler,
     UpdateCourseworkHandler,
+    DeleteCourseworkHandler,
     SyncGradeHandler,
     CourseworkConflictCheckService,
   ],
@@ -45,6 +47,7 @@ import { CourseworkConflictCheckService } from './coursework-conflict-check.serv
     NotaService,
     PublishCourseworkHandler,
     UpdateCourseworkHandler,
+    DeleteCourseworkHandler,
     SyncGradeHandler,
     CourseworkConflictCheckService,
   ],

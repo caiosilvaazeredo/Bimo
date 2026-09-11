@@ -342,9 +342,29 @@ export class MicrosoftTeamsClient {
     return body?.webUrl ?? null;
   }
 
+  /**
+   * RF-SYNC-06: exclui a tarefa no Teams (chamado só depois de confirmação
+   * explícita do professor). Simplificação assumida (validar contra um
+   * tenant EDU real): o Graph pode recusar excluir um assignment já
+   * publicado/atribuído a alunos — nesse caso a chamada abaixo relança o
+   * erro HTTP normalmente, e o Bimo trata como falha de propagação
+   * (mesmo tratamento de erro dos demais jobs de sincronização).
+   */
+  async deleteAssignment(
+    accessToken: string,
+    classId: string,
+    assignmentId: string,
+  ): Promise<void> {
+    await this.request(
+      accessToken,
+      'DELETE',
+      `${GRAPH_API_BASE}/education/classes/${classId}/assignments/${assignmentId}`,
+    );
+  }
+
   private async request(
     accessToken: string,
-    method: 'GET' | 'POST' | 'PATCH',
+    method: 'GET' | 'POST' | 'PATCH' | 'DELETE',
     url: string,
     body?: unknown,
   ): Promise<Response> {

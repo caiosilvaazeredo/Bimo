@@ -321,9 +321,22 @@ export class GoogleClassroomClient {
     }));
   }
 
+  /** RF-SYNC-06: exclui a tarefa no Classroom (chamado só depois de confirmação explícita do professor). */
+  async deleteCourseWork(
+    accessToken: string,
+    courseId: string,
+    courseWorkId: string,
+  ): Promise<void> {
+    await this.request(
+      accessToken,
+      'DELETE',
+      `${CLASSROOM_API_BASE}/courses/${courseId}/courseWork/${courseWorkId}`,
+    );
+  }
+
   private async request(
     accessToken: string,
-    method: 'GET' | 'POST' | 'PATCH',
+    method: 'GET' | 'POST' | 'PATCH' | 'DELETE',
     url: string,
     body?: unknown,
   ): Promise<Response> {

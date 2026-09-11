@@ -13,6 +13,7 @@ import { Tarefa } from './tarefa.entity';
 
 export const PUBLISH_COURSEWORK_JOB = 'PUBLISH_COURSEWORK';
 export const UPDATE_COURSEWORK_JOB = 'UPDATE_COURSEWORK';
+export const DELETE_COURSEWORK_JOB = 'DELETE_COURSEWORK';
 
 export interface TarefaInput {
   title: string;
@@ -105,12 +106,14 @@ export class TarefaService {
     return tarefa;
   }
 
+  /** Exclui do resultado as tarefas já excluídas (RF-SYNC-06); use findById para auditoria de uma tarefa específica. */
   async listByTurma(turmaEspelhadaId: string): Promise<Tarefa[]> {
     const tenantId = TenantContext.getTenantId();
-    return this.repository.find({
+    const tarefas = await this.repository.find({
       where: { tenantId, turmaEspelhadaId },
       order: { createdAt: 'DESC' },
     });
+    return tarefas.filter((t) => t.syncStatus !== SyncStatus.DELETED);
   }
 
   async markSynced(
@@ -151,6 +154,47 @@ export class TarefaService {
     await this.repository.update(
       { id, tenantId },
       { syncStatus: SyncStatus.CONFLICT },
+    );
+  }
+
+  /**
+   * RF-SYNC-06: exige confirmação explícita do professor (nunca implícita
+   * em outro fluxo) antes de propagar a exclusão para as duas plataformas.
+   * Enfileira DELETE_COURSEWORK_JOB; o registro só vira DELETED depois que
+   * o handler confirma a exclusão nas duas plataformas (ou não havia nada
+   * publicado ainda).
+   */
+  async requestDeletion(
+    tarefaId: string,
+    professorId: string,
+    confirmed: boolean,
+  ): Promise<Tarefa> {
+    if (!confirmed) {
+      throw new BadRequestException(
+        'Confirme explicitamente (confirm=true) antes de excluir: a exclusão é propagada para o Classroom e o Teams.',
+      );
+    }
+    const tenantId = TenantContext.getTenantId();
+    const tarefa = await this.findById(tarefaId);
+
+    await this.repository.update(
+      { id: tarefaId, tenantId },
+      { syncStatus: SyncStatus.DELETING },
+    );
+
+    await this.syncQueueService.enqueue(tenantId, DELETE_COURSEWORK_JOB, {
+      tarefaId: tarefa.id,
+      professorId,
+    });
+
+    return this.findById(tarefaId);
+  }
+
+  async markDeleted(id: string): Promise<void> {
+    const tenantId = TenantContext.getTenantId();
+    await this.repository.update(
+      { id, tenantId },
+      { syncStatus: SyncStatus.DELETED, lastError: null },
     );
   }
 

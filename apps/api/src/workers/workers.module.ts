@@ -14,6 +14,7 @@ import {
 import { CourseworkModule } from '../coursework/coursework.module';
 import { PublishCourseworkHandler } from '../coursework/publish-coursework.handler';
 import { UpdateCourseworkHandler } from '../coursework/update-coursework.handler';
+import { DeleteCourseworkHandler } from '../coursework/delete-coursework.handler';
 import { SyncGradeHandler } from '../coursework/sync-grade.handler';
 
 const POLL_INTERVAL_MS = 5_000;
@@ -45,6 +46,7 @@ const POLL_INTERVAL_MS = 5_000;
         createMissingCourseHandler: CreateMissingGoogleCourseHandler,
         publishCourseworkHandler: PublishCourseworkHandler,
         updateCourseworkHandler: UpdateCourseworkHandler,
+        deleteCourseworkHandler: DeleteCourseworkHandler,
         syncGradeHandler: SyncGradeHandler,
       ) => [
         createTurmaHandler,
@@ -52,6 +54,7 @@ const POLL_INTERVAL_MS = 5_000;
         createMissingCourseHandler,
         publishCourseworkHandler,
         updateCourseworkHandler,
+        deleteCourseworkHandler,
         syncGradeHandler,
       ],
       inject: [
@@ -60,6 +63,7 @@ const POLL_INTERVAL_MS = 5_000;
         CreateMissingGoogleCourseHandler,
         PublishCourseworkHandler,
         UpdateCourseworkHandler,
+        DeleteCourseworkHandler,
         SyncGradeHandler,
       ],
     },

@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Patch,
@@ -95,6 +96,19 @@ export class TarefaController {
     const { sub: professorId, tenantId } = req.user;
     return TenantContext.run({ tenantId }, () =>
       this.conflictCheckService.checkTarefa(id, professorId),
+    );
+  }
+
+  /** RF-SYNC-06: exige confirm=true; a exclusão é propagada para Classroom e Teams. */
+  @Delete('tarefas/:id')
+  async delete(
+    @Req() req: Request & { user: BimoJwtPayload },
+    @Param('id') id: string,
+    @Body() dto: { confirm?: boolean },
+  ) {
+    const { sub: professorId, tenantId } = req.user;
+    return TenantContext.run({ tenantId }, () =>
+      this.tarefaService.requestDeletion(id, professorId, dto.confirm === true),
     );
   }
 }
