@@ -29,6 +29,7 @@ import { EntregaContingencia } from './aluno/entrega-contingencia.entity';
 import { PortalModule } from './portal/portal.module';
 import { MigrationModule } from './migration/migration.module';
 import { AdminModule } from './admin/admin.module';
+import { BillingModule } from './billing/billing.module';
 
 const JWT_SCOPED_ROUTES = [
   'turmas-espelhadas',
@@ -45,6 +46,8 @@ const JWT_SCOPED_ROUTES = [
   'admin/professores',
   'admin/professores/(.*)',
   'admin/tenant/(.*)',
+  'admin/billing/(.*)',
+  'admin/reports/(.*)',
 ];
 
 /** Não resolve tenant nenhum: cria um tenant novo (RF-ADMIN-01). */
@@ -92,6 +95,7 @@ const NO_TENANT_ROUTES = ['admin/tenants'];
     PortalModule,
     MigrationModule,
     AdminModule,
+    BillingModule,
     WorkersModule,
   ],
   controllers: [AppController],
