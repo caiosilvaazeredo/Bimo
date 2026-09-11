@@ -27,6 +27,7 @@ import { Aluno } from './aluno/aluno.entity';
 import { Matricula } from './aluno/matricula.entity';
 import { EntregaContingencia } from './aluno/entrega-contingencia.entity';
 import { PortalModule } from './portal/portal.module';
+import { MigrationModule } from './migration/migration.module';
 
 const JWT_SCOPED_ROUTES = [
   'turmas-espelhadas',
@@ -37,6 +38,8 @@ const JWT_SCOPED_ROUTES = [
   'notifications/(.*)',
   'portal',
   'portal/(.*)',
+  'migrations',
+  'migrations/(.*)',
 ];
 
 @Module({
@@ -79,6 +82,7 @@ const JWT_SCOPED_ROUTES = [
     NotificationsModule,
     AlunoModule,
     PortalModule,
+    MigrationModule,
     WorkersModule,
   ],
   controllers: [AppController],

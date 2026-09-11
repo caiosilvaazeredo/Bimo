@@ -13,7 +13,7 @@ export interface CreatedTeam {
   name: string;
 }
 
-interface CreatedGroup {
+interface GroupInfo {
   id: string;
   displayName: string;
 }
@@ -39,46 +39,80 @@ export class MicrosoftTeamsClient {
     return { externalId: group.id, name: group.displayName };
   }
 
+  /** RF-MIG-01: busca um Team/grupo já existente para vincular. */
+  async getGroup(accessToken: string, groupId: string): Promise<GroupInfo> {
+    const response = await this.request(
+      accessToken,
+      'GET',
+      `${GRAPH_API_BASE}/groups/${groupId}`,
+    );
+    return (await response.json()) as GroupInfo;
+  }
+
+  /** RF-MIG-03: roster do grupo, para reconciliar por e-mail. */
+  async listMemberEmails(
+    accessToken: string,
+    groupId: string,
+  ): Promise<string[]> {
+    const response = await this.request(
+      accessToken,
+      'GET',
+      `${GRAPH_API_BASE}/groups/${groupId}/members`,
+    );
+    const body = (await response.json()) as {
+      value?: { mail?: string; userPrincipalName?: string }[];
+    };
+    return (body.value ?? [])
+      .map((member) => member.mail ?? member.userPrincipalName)
+      .filter((email): email is string => Boolean(email));
+  }
+
   private async createGroup(
     accessToken: string,
     input: { name: string; description?: string },
-  ): Promise<CreatedGroup> {
-    const response = await this.post(accessToken, `${GRAPH_API_BASE}/groups`, {
-      displayName: input.name,
-      description: input.description,
-      mailNickname:
-        input.name.replace(/[^a-zA-Z0-9]/g, '').slice(0, 60) || 'turma',
-      mailEnabled: false,
-      securityEnabled: false,
-      groupTypes: ['Unified'],
-    });
-    const body = (await response.json()) as CreatedGroup;
-    return body;
+  ): Promise<GroupInfo> {
+    const response = await this.request(
+      accessToken,
+      'POST',
+      `${GRAPH_API_BASE}/groups`,
+      {
+        displayName: input.name,
+        description: input.description,
+        mailNickname:
+          input.name.replace(/[^a-zA-Z0-9]/g, '').slice(0, 60) || 'turma',
+        mailEnabled: false,
+        securityEnabled: false,
+        groupTypes: ['Unified'],
+      },
+    );
+    return (await response.json()) as GroupInfo;
   }
 
   private async createTeamFromGroup(
     accessToken: string,
     groupId: string,
   ): Promise<void> {
-    await this.post(
+    await this.request(
       accessToken,
+      'POST',
       `${GRAPH_API_BASE}/groups/${groupId}/team`,
       {},
     );
   }
 
-  private async post(
+  private async request(
     accessToken: string,
+    method: 'GET' | 'POST',
     url: string,
-    body: unknown,
+    body?: unknown,
   ): Promise<Response> {
     const response = await fetch(url, {
-      method: 'POST',
+      method,
       headers: {
         Authorization: `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(body),
+      body: body !== undefined ? JSON.stringify(body) : undefined,
     });
 
     if (response.status === 429 || response.status === 503) {

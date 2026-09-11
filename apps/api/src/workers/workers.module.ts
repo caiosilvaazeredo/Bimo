@@ -6,6 +6,11 @@ import { SYNC_JOB_HANDLERS } from '../sync-queue/sync-job-handler';
 import { SyncEventLogModule } from '../sync-event-log/sync-event-log.module';
 import { TurmaEspelhadaModule } from '../turma-espelhada/turma-espelhada.module';
 import { CreateTurmaEspelhadaHandler } from '../turma-espelhada/create-turma-espelhada.handler';
+import { MigrationModule } from '../migration/migration.module';
+import {
+  CreateMissingGoogleCourseHandler,
+  CreateMissingMicrosoftTeamHandler,
+} from '../migration/create-missing-side.handlers';
 
 const POLL_INTERVAL_MS = 5_000;
 
@@ -19,15 +24,30 @@ const POLL_INTERVAL_MS = 5_000;
  * bater no banco fora de um ambiente real.
  */
 @Module({
-  imports: [SyncQueueModule, SyncEventLogModule, TurmaEspelhadaModule],
+  imports: [
+    SyncQueueModule,
+    SyncEventLogModule,
+    TurmaEspelhadaModule,
+    MigrationModule,
+  ],
   providers: [
     SyncWorkerService,
     {
       provide: SYNC_JOB_HANDLERS,
-      useFactory: (createTurmaHandler: CreateTurmaEspelhadaHandler) => [
+      useFactory: (
+        createTurmaHandler: CreateTurmaEspelhadaHandler,
+        createMissingTeamHandler: CreateMissingMicrosoftTeamHandler,
+        createMissingCourseHandler: CreateMissingGoogleCourseHandler,
+      ) => [
         createTurmaHandler,
+        createMissingTeamHandler,
+        createMissingCourseHandler,
       ],
-      inject: [CreateTurmaEspelhadaHandler],
+      inject: [
+        CreateTurmaEspelhadaHandler,
+        CreateMissingMicrosoftTeamHandler,
+        CreateMissingGoogleCourseHandler,
+      ],
     },
   ],
   exports: [SyncWorkerService],

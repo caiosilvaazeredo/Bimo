@@ -110,4 +110,74 @@ export class TurmaEspelhadaService {
       { syncStatus: SyncStatus.ERROR, lastError: message },
     );
   }
+
+  async findByGoogleCourseId(
+    googleCourseId: string,
+  ): Promise<TurmaEspelhada | null> {
+    const tenantId = TenantContext.getTenantId();
+    return this.repository.findOne({ where: { tenantId, googleCourseId } });
+  }
+
+  async findByMicrosoftTeamId(
+    microsoftTeamId: string,
+  ): Promise<TurmaEspelhada | null> {
+    const tenantId = TenantContext.getTenantId();
+    return this.repository.findOne({ where: { tenantId, microsoftTeamId } });
+  }
+
+  /**
+   * RF-MIG-01: cria a turma-ponte apontando direto para um Course e/ou
+   * Team já existentes (em vez de mandar criar do zero, como em create()).
+   */
+  async createLinked(input: {
+    professorId: string;
+    name: string;
+    academicPeriod?: string;
+    googleCourseId: string | null;
+    microsoftTeamId: string | null;
+  }): Promise<TurmaEspelhada> {
+    const tenantId = TenantContext.getTenantId();
+    const bothSides =
+      Boolean(input.googleCourseId) && Boolean(input.microsoftTeamId);
+
+    return this.repository.save(
+      this.repository.create({
+        tenantId,
+        professorId: input.professorId,
+        name: input.name,
+        academicPeriod: input.academicPeriod ?? null,
+        googleCourseId: input.googleCourseId,
+        microsoftTeamId: input.microsoftTeamId,
+        syncStatus: bothSides ? SyncStatus.SYNCED : SyncStatus.SYNCING,
+      }),
+    );
+  }
+
+  /** Preenche o lado que faltava (RF-MIG-01) e marca sincronizado quando os dois existirem. */
+  async markSideSynced(
+    id: string,
+    side: 'GOOGLE' | 'MICROSOFT',
+    externalId: string,
+  ): Promise<TurmaEspelhada> {
+    const tenantId = TenantContext.getTenantId();
+    const patch =
+      side === 'GOOGLE'
+        ? { googleCourseId: externalId }
+        : { microsoftTeamId: externalId };
+    await this.repository.update({ id, tenantId }, patch);
+
+    const turma = await this.findById(id);
+    if (
+      turma.googleCourseId &&
+      turma.microsoftTeamId &&
+      turma.syncStatus !== SyncStatus.SYNCED
+    ) {
+      await this.repository.update(
+        { id, tenantId },
+        { syncStatus: SyncStatus.SYNCED, lastError: null },
+      );
+      return this.findById(id);
+    }
+    return turma;
+  }
 }
