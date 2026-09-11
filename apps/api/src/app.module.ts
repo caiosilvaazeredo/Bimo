@@ -30,6 +30,7 @@ import { PortalModule } from './portal/portal.module';
 import { MigrationModule } from './migration/migration.module';
 import { AdminModule } from './admin/admin.module';
 import { BillingModule } from './billing/billing.module';
+import { PrivacyModule } from './privacy/privacy.module';
 
 const JWT_SCOPED_ROUTES = [
   'turmas-espelhadas',
@@ -48,6 +49,8 @@ const JWT_SCOPED_ROUTES = [
   'admin/tenant/(.*)',
   'admin/billing/(.*)',
   'admin/reports/(.*)',
+  'me',
+  'me/(.*)',
 ];
 
 /** Não resolve tenant nenhum: cria um tenant novo (RF-ADMIN-01). */
@@ -96,6 +99,7 @@ const NO_TENANT_ROUTES = ['admin/tenants'];
     MigrationModule,
     AdminModule,
     BillingModule,
+    PrivacyModule,
     WorkersModule,
   ],
   controllers: [AppController],

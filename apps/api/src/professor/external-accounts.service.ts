@@ -88,6 +88,12 @@ export class ExternalAccountsService {
     }
   }
 
+  /** RNF-PRIV-03: exclusão individual — remove todos os tokens do titular. */
+  async removeAllForProfessor(professorId: string): Promise<void> {
+    const tenantId = TenantContext.getTenantId();
+    await this.repository.delete({ tenantId, professorId });
+  }
+
   async listByProfessor(professorId: string): Promise<ExternalAccount[]> {
     const tenantId = TenantContext.getTenantId();
     return this.repository.find({ where: { tenantId, professorId } });

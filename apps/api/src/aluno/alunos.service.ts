@@ -42,4 +42,16 @@ export class AlunosService {
     }
     return aluno;
   }
+
+  /** RNF-PRIV-03: direito de exclusão individual (LGPD). */
+  async anonymize(id: string): Promise<void> {
+    const tenantId = TenantContext.getTenantId();
+    await this.repository.update(
+      { id, tenantId },
+      {
+        institutionalEmail: `titular-removido-${id}@anonimizado.bimo`,
+        displayName: 'Titular removido a pedido (LGPD)',
+      },
+    );
+  }
 }

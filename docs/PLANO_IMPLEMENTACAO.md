@@ -129,3 +129,37 @@ O DoD global da v1 é o da seção 9 do documento de requisitos.
 1. Confirmar este plano (fases, ordem, riscos) com o time/product owner
 2. Fase 0: criar monorepo, configurar CI, provisionar Oracle Cloud Free Tier, abrir registro de app Google/Microsoft em modo teste
 3. Definir escolas/tenants do piloto para validar SSO (RF-AUTH-05) e escala real (RNF-PERF-03) o quanto antes
+
+## 7. Status de implementação (código em `apps/api` e `apps/web`)
+
+As Fases 0-9 têm uma primeira implementação no branch `claude/pensive-dijkstra-3s3dva`,
+com build, lint e 90 testes unitários passando a cada commit. Resumo do que está
+implementado de fato versus o que ficou simplificado ou pendente:
+
+**Completo**: Fase 0 (monorepo, CI, multi-tenancy), Fase 1 (RF-AUTH-01 a 04, RBAC/JWT —
+RF-AUTH-05 SSO institucional fica para quando algum tenant piloto exigir), Fase 2
+núcleo (fila de sincronização, integração Google/Microsoft isolada com contract
+tests, criação de turma espelhada com retry/backoff), Fase 3 slice inicial (login e
+painel de turmas no Next.js — falta revisão WCAG a fundo, links de chat nativo e
+resumo periódico), Fase 4 (log de auditoria, conflitos, notificações), Fase 5
+(portal do aluno e contingência — RF-STU-04 detecção automática de sinais fica para
+depois), Fase 6 (migração de turmas existentes), Fase 7 (administração
+institucional), Fase 8 (billing de aluno ativo e relatórios), Fase 9 (exclusão
+individual de dados via LGPD/RNF-PRIV-03).
+
+**Pendente, e por quê**: RF-SYNC-01/02/04 (publicar/editar coursework e notas) e
+RF-INT-04 (materiais por referência) não foram implementados — são a peça que falta
+para completar várias outras: RF-STU-02 (tarefas/notas no portal), RF-REPORT-01
+completo (taxa de entrega real), RF-MIG-02/04 (importar histórico de tarefas/notas/
+materiais) e o gatilho real de RF-SYNC-03 (o motor de conflito já existe e está
+testado, só falta algo que o dispare). Recomenda-se essa camada de coursework como
+próximo bloco de trabalho, por destravar o maior número de requisitos pendentes de
+uma vez.
+
+**Não executado nesta sessão** (exige ambiente real, não é código): teste de carga
+contra RNF-PERF-03 (script k6 em `apps/api/loadtest/`, pronto para rodar contra um
+staging real), medição de cobertura de teste formal para bater a meta de 80% de
+RNF-MAINT-01, e o processo de verificação OAuth do Google (OAuth verification/CASA)
+e admin consent do Microsoft Entra ID — ambos dependem de contas reais nos
+consoles do Google Cloud e do Microsoft Entra ID, fora do escopo de um agente de
+código.

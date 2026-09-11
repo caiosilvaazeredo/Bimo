@@ -99,4 +99,21 @@ export class ProfessorsService {
     const tenantId = TenantContext.getTenantId();
     await this.professorRepository.update({ id, tenantId }, { active: false });
   }
+
+  /**
+   * RNF-PRIV-03: direito de exclusão individual (LGPD) — apaga o
+   * e-mail/nome do titular sem quebrar referências (turmas, contas
+   * externas já removidas à parte) já existentes no banco.
+   */
+  async anonymize(id: string): Promise<void> {
+    const tenantId = TenantContext.getTenantId();
+    await this.professorRepository.update(
+      { id, tenantId },
+      {
+        institutionalEmail: `titular-removido-${id}@anonimizado.bimo`,
+        displayName: 'Titular removido a pedido (LGPD)',
+        active: false,
+      },
+    );
+  }
 }
