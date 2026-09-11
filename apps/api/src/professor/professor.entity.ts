@@ -33,6 +33,10 @@ export class Professor {
   @OneToMany(() => ExternalAccount, (account) => account.professor)
   externalAccounts: ExternalAccount[];
 
+  /** RF-ADMIN-05: revogado, o professor não consegue mais logar. */
+  @Column({ default: true })
+  active: boolean;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 }

@@ -28,6 +28,7 @@ import { Matricula } from './aluno/matricula.entity';
 import { EntregaContingencia } from './aluno/entrega-contingencia.entity';
 import { PortalModule } from './portal/portal.module';
 import { MigrationModule } from './migration/migration.module';
+import { AdminModule } from './admin/admin.module';
 
 const JWT_SCOPED_ROUTES = [
   'turmas-espelhadas',
@@ -40,7 +41,14 @@ const JWT_SCOPED_ROUTES = [
   'portal/(.*)',
   'migrations',
   'migrations/(.*)',
+  'admin/turmas',
+  'admin/professores',
+  'admin/professores/(.*)',
+  'admin/tenant/(.*)',
 ];
+
+/** Não resolve tenant nenhum: cria um tenant novo (RF-ADMIN-01). */
+const NO_TENANT_ROUTES = ['admin/tenants'];
 
 @Module({
   imports: [
@@ -83,6 +91,7 @@ const JWT_SCOPED_ROUTES = [
     AlunoModule,
     PortalModule,
     MigrationModule,
+    AdminModule,
     WorkersModule,
   ],
   controllers: [AppController],
@@ -96,7 +105,7 @@ export class AppModule implements NestModule {
     // ficam fora do middleware global.
     consumer
       .apply(TenantMiddleware)
-      .exclude('health', 'auth/(.*)', ...JWT_SCOPED_ROUTES)
+      .exclude('health', 'auth/(.*)', ...JWT_SCOPED_ROUTES, ...NO_TENANT_ROUTES)
       .forRoutes('*');
   }
 }

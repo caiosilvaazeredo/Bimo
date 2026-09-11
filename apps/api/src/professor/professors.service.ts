@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { TenantContext } from '../tenant/tenant-context';
@@ -15,6 +19,7 @@ export class ProfessorsService {
   /**
    * Um perfil Bimo é único por (tenant, e-mail institucional). Login OAuth
    * de qualquer provedor reconcilia pelo mesmo e-mail (RF-AUTH-03).
+   * Bloqueia o login se o professor foi revogado (RF-ADMIN-05).
    */
   async findOrCreateByInstitutionalEmail(params: {
     institutionalEmail: string;
@@ -26,6 +31,11 @@ export class ProfessorsService {
       where: { tenantId, institutionalEmail: params.institutionalEmail },
     });
     if (existing) {
+      if (!existing.active) {
+        throw new ForbiddenException(
+          'Acesso revogado pelo administrador institucional.',
+        );
+      }
       return existing;
     }
 
@@ -35,6 +45,35 @@ export class ProfessorsService {
         institutionalEmail: params.institutionalEmail,
         displayName: params.displayName,
         role: ProfessorRole.PROFESSOR,
+        active: true,
+      }),
+    );
+  }
+
+  /**
+   * Pré-cadastra um admin institucional/de rede pelo e-mail (RF-ADMIN-01):
+   * quando essa pessoa logar pela primeira vez, o findOrCreate acima já
+   * encontra este registro em vez de criar um Professor comum.
+   */
+  async createWithRole(params: {
+    institutionalEmail: string;
+    displayName: string;
+    role: ProfessorRole;
+  }): Promise<Professor> {
+    const tenantId = TenantContext.getTenantId();
+    const existing = await this.professorRepository.findOne({
+      where: { tenantId, institutionalEmail: params.institutionalEmail },
+    });
+    if (existing) {
+      return existing;
+    }
+    return this.professorRepository.save(
+      this.professorRepository.create({
+        tenantId,
+        institutionalEmail: params.institutionalEmail,
+        displayName: params.displayName,
+        role: params.role,
+        active: true,
       }),
     );
   }
@@ -48,5 +87,16 @@ export class ProfessorsService {
       throw new NotFoundException('Professor não encontrado');
     }
     return professor;
+  }
+
+  async listByTenant(): Promise<Professor[]> {
+    const tenantId = TenantContext.getTenantId();
+    return this.professorRepository.find({ where: { tenantId } });
+  }
+
+  /** RF-ADMIN-05: revoga o acesso de um professor sem afetar as demais turmas/professores. */
+  async revoke(id: string): Promise<void> {
+    const tenantId = TenantContext.getTenantId();
+    await this.professorRepository.update({ id, tenantId }, { active: false });
   }
 }
