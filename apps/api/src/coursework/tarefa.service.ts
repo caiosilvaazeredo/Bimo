@@ -144,4 +144,64 @@ export class TarefaService {
       { syncStatus: SyncStatus.ERROR, lastError: message },
     );
   }
+
+  async findByGoogleCourseWorkId(
+    googleCourseWorkId: string,
+  ): Promise<Tarefa | null> {
+    const tenantId = TenantContext.getTenantId();
+    return this.repository.findOne({ where: { tenantId, googleCourseWorkId } });
+  }
+
+  async findByMicrosoftAssignmentId(
+    microsoftAssignmentId: string,
+  ): Promise<Tarefa | null> {
+    const tenantId = TenantContext.getTenantId();
+    return this.repository.findOne({
+      where: { tenantId, microsoftAssignmentId },
+    });
+  }
+
+  /**
+   * RF-MIG-02: cria/atualiza a partir de uma tarefa já existente e
+   * publicada numa das plataformas (importação de histórico), sem
+   * enfileirar nenhum job — a tarefa já está publicada na origem, não
+   * precisa ser criada de novo. Idempotente por id externo (RF-MIG-05).
+   */
+  async importFromExternal(input: {
+    turmaEspelhadaId: string;
+    title: string;
+    description?: string | null;
+    dueDate?: Date | null;
+    points?: number | null;
+    materialLinks?: string[];
+    googleCourseWorkId?: string | null;
+    microsoftAssignmentId?: string | null;
+  }): Promise<Tarefa> {
+    const tenantId = TenantContext.getTenantId();
+
+    const existing = input.googleCourseWorkId
+      ? await this.findByGoogleCourseWorkId(input.googleCourseWorkId)
+      : input.microsoftAssignmentId
+        ? await this.findByMicrosoftAssignmentId(input.microsoftAssignmentId)
+        : null;
+
+    if (existing) {
+      return existing;
+    }
+
+    return this.repository.save(
+      this.repository.create({
+        tenantId,
+        turmaEspelhadaId: input.turmaEspelhadaId,
+        title: input.title,
+        description: input.description ?? null,
+        dueDate: input.dueDate ?? null,
+        points: input.points ?? null,
+        materialLinks: input.materialLinks ?? [],
+        googleCourseWorkId: input.googleCourseWorkId ?? null,
+        microsoftAssignmentId: input.microsoftAssignmentId ?? null,
+        syncStatus: SyncStatus.SYNCED,
+      }),
+    );
+  }
 }

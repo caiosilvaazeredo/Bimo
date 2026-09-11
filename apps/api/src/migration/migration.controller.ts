@@ -39,4 +39,16 @@ export class MigrationController {
       this.migrationService.reconcileRoster(turmaId, professorId),
     );
   }
+
+  /** RF-MIG-02: importa histórico de tarefas/notas. Rode depois de /roster. */
+  @Post('turmas-existentes/:turmaId/historico')
+  async importHistory(
+    @Req() req: Request & { user: BimoJwtPayload },
+    @Param('turmaId') turmaId: string,
+  ) {
+    const { sub: professorId, tenantId } = req.user;
+    return TenantContext.run({ tenantId }, () =>
+      this.migrationService.importHistory(turmaId, professorId),
+    );
+  }
 }

@@ -36,6 +36,21 @@ export interface AssignmentInput {
   materialLinks?: string[];
 }
 
+export interface ExistingAssignment {
+  externalId: string;
+  title: string;
+  description: string | null;
+  dueDateIso: string | null;
+  points: number | null;
+  materialLinks: string[];
+}
+
+export interface ExistingSubmission {
+  microsoftUserId: string;
+  points: number | null;
+  status: string;
+}
+
 /**
  * Cliente do Microsoft Graph para Teams/Education. Isolado neste módulo
  * (RNF-ARCH-03): mudanças na API do Microsoft nunca devem exigir
@@ -196,6 +211,65 @@ export class MicrosoftTeamsClient {
         },
       },
     );
+  }
+
+  /** RF-MIG-02: histórico de tarefas já publicadas na turma (para migração). */
+  async listAssignments(
+    accessToken: string,
+    classId: string,
+  ): Promise<ExistingAssignment[]> {
+    const response = await this.request(
+      accessToken,
+      'GET',
+      `${GRAPH_API_BASE}/education/classes/${classId}/assignments`,
+    );
+    const body = (await response.json()) as {
+      value?: {
+        id: string;
+        displayName: string;
+        instructions?: { content?: string };
+        dueDateTime?: string;
+        grading?: { maxPoints?: number };
+        resources?: { link?: string }[];
+      }[];
+    };
+    return (body.value ?? []).map((a) => ({
+      externalId: a.id,
+      title: a.displayName,
+      description: a.instructions?.content ?? null,
+      dueDateIso: a.dueDateTime ?? null,
+      points: a.grading?.maxPoints ?? null,
+      materialLinks: (a.resources ?? [])
+        .map((r) => r.link)
+        .filter((link): link is string => Boolean(link)),
+    }));
+  }
+
+  /** RF-MIG-02: entregas/notas já lançadas para essa tarefa (para migração). */
+  async listAssignmentSubmissions(
+    accessToken: string,
+    classId: string,
+    assignmentId: string,
+  ): Promise<ExistingSubmission[]> {
+    const response = await this.request(
+      accessToken,
+      'GET',
+      `${GRAPH_API_BASE}/education/classes/${classId}/assignments/${assignmentId}/submissions`,
+    );
+    const body = (await response.json()) as {
+      value?: {
+        recipient?: { userId?: string };
+        grade?: { points?: number };
+        status?: string;
+      }[];
+    };
+    return (body.value ?? [])
+      .filter((s) => s.recipient?.userId)
+      .map((s) => ({
+        microsoftUserId: s.recipient!.userId as string,
+        points: s.grade?.points ?? null,
+        status: s.status ?? 'assigned',
+      }));
   }
 
   private async createGroup(

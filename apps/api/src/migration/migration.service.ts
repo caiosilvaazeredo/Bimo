@@ -9,6 +9,9 @@ import { TurmaEspelhadaService } from '../turma-espelhada/turma-espelhada.servic
 import { TurmaEspelhada } from '../turma-espelhada/turma-espelhada.entity';
 import { AlunosService } from '../aluno/alunos.service';
 import { MatriculaService } from '../aluno/matricula.service';
+import { TarefaService } from '../coursework/tarefa.service';
+import { NotaService } from '../coursework/nota.service';
+import { SubmissionStatus } from '../coursework/submission-status.enum';
 import {
   CREATE_MISSING_GOOGLE_COURSE_JOB,
   CREATE_MISSING_MICROSOFT_TEAM_JOB,
@@ -38,6 +41,8 @@ export class MigrationService {
     private readonly syncQueueService: SyncQueueService,
     private readonly alunosService: AlunosService,
     private readonly matriculaService: MatriculaService,
+    private readonly tarefaService: TarefaService,
+    private readonly notaService: NotaService,
   ) {}
 
   /**
@@ -161,6 +166,110 @@ export class MigrationService {
     }
 
     return result;
+  }
+
+  /**
+   * RF-MIG-02: importa o histórico de tarefas já publicadas e as notas
+   * já lançadas em cada lado já vinculado, preservando a data de
+   * publicação original e o status de entrega de cada aluno. Idempotente
+   * (RF-MIG-05) por id externo da tarefa. Não tenta publicar essas
+   * tarefas históricas no lado que acabou de ser criado pelo Bimo — só
+   * traz o que já existe como ponto de partida (RF-MIG-01).
+   */
+  async importHistory(
+    turmaId: string,
+    professorId: string,
+  ): Promise<{ tarefasImportadas: number }> {
+    const turma = await this.turmaEspelhadaService.findById(turmaId);
+    const matriculas = await this.matriculaService.listByTurma(turmaId);
+    const alunoIdByGoogleUserId = new Map(
+      matriculas
+        .filter((m) => m.googleUserId)
+        .map((m) => [m.googleUserId as string, m.alunoId]),
+    );
+    const alunoIdByMicrosoftUserId = new Map(
+      matriculas
+        .filter((m) => m.microsoftUserId)
+        .map((m) => [m.microsoftUserId as string, m.alunoId]),
+    );
+
+    let count = 0;
+
+    if (turma.googleCourseId) {
+      const token = await this.googleAccessToken(professorId);
+      const courseWorks = await this.googleClassroomClient.listCourseWork(
+        token,
+        turma.googleCourseId,
+      );
+
+      for (const cw of courseWorks) {
+        const tarefa = await this.tarefaService.importFromExternal({
+          turmaEspelhadaId: turma.id,
+          title: cw.title,
+          description: cw.description,
+          dueDate: cw.dueDateIso ? new Date(cw.dueDateIso) : null,
+          points: cw.points,
+          materialLinks: cw.materialLinks,
+          googleCourseWorkId: cw.externalId,
+        });
+        count += 1;
+
+        const submissions = await this.googleClassroomClient.listSubmissions(
+          token,
+          turma.googleCourseId,
+          cw.externalId,
+        );
+        for (const sub of submissions) {
+          if (sub.assignedGrade === null) continue;
+          const alunoId = alunoIdByGoogleUserId.get(sub.googleUserId);
+          if (!alunoId) continue;
+          await this.notaService.setGrade(tarefa.id, alunoId, professorId, {
+            grade: sub.assignedGrade,
+            status: sub.late
+              ? SubmissionStatus.LATE
+              : SubmissionStatus.SUBMITTED,
+          });
+        }
+      }
+    }
+
+    if (turma.microsoftTeamId) {
+      const token = await this.microsoftAccessToken(professorId);
+      const assignments = await this.microsoftTeamsClient.listAssignments(
+        token,
+        turma.microsoftTeamId,
+      );
+
+      for (const a of assignments) {
+        const tarefa = await this.tarefaService.importFromExternal({
+          turmaEspelhadaId: turma.id,
+          title: a.title,
+          description: a.description,
+          dueDate: a.dueDateIso ? new Date(a.dueDateIso) : null,
+          points: a.points,
+          materialLinks: a.materialLinks,
+          microsoftAssignmentId: a.externalId,
+        });
+        count += 1;
+
+        const submissions =
+          await this.microsoftTeamsClient.listAssignmentSubmissions(
+            token,
+            turma.microsoftTeamId,
+            a.externalId,
+          );
+        for (const sub of submissions) {
+          if (sub.points === null) continue;
+          const alunoId = alunoIdByMicrosoftUserId.get(sub.microsoftUserId);
+          if (!alunoId) continue;
+          await this.notaService.setGrade(tarefa.id, alunoId, professorId, {
+            grade: sub.points,
+          });
+        }
+      }
+    }
+
+    return { tarefasImportadas: count };
   }
 
   private async findExistingLink(

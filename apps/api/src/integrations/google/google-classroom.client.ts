@@ -32,6 +32,22 @@ export interface CourseWorkInput {
   materialLinks?: string[];
 }
 
+export interface ExistingCourseWork {
+  externalId: string;
+  title: string;
+  description: string | null;
+  dueDateIso: string | null;
+  points: number | null;
+  materialLinks: string[];
+}
+
+export interface ExistingSubmission {
+  googleUserId: string;
+  assignedGrade: number | null;
+  late: boolean;
+  state: string;
+}
+
 /**
  * Cliente da Google Classroom API. Isolado neste módulo (RNF-ARCH-03):
  * mudanças na API do Google nunca devem exigir alteração no cliente
@@ -209,6 +225,68 @@ export class GoogleClassroomClient {
     );
   }
 
+  /** RF-MIG-02: histórico de tarefas já publicadas na turma (para migração). */
+  async listCourseWork(
+    accessToken: string,
+    courseId: string,
+  ): Promise<ExistingCourseWork[]> {
+    const response = await this.request(
+      accessToken,
+      'GET',
+      `${CLASSROOM_API_BASE}/courses/${courseId}/courseWork`,
+    );
+    const body = (await response.json()) as {
+      courseWork?: {
+        id: string;
+        title: string;
+        description?: string;
+        maxPoints?: number;
+        dueDate?: { year: number; month: number; day: number };
+        dueTime?: { hours?: number; minutes?: number };
+        materials?: { link?: { url?: string } }[];
+      }[];
+    };
+    return (body.courseWork ?? []).map((cw) => ({
+      externalId: cw.id,
+      title: cw.title,
+      description: cw.description ?? null,
+      dueDateIso: cw.dueDate
+        ? fromGoogleDateTime(cw.dueDate, cw.dueTime)
+        : null,
+      points: cw.maxPoints ?? null,
+      materialLinks: (cw.materials ?? [])
+        .map((m) => m.link?.url)
+        .filter((url): url is string => Boolean(url)),
+    }));
+  }
+
+  /** RF-MIG-02: entregas/notas já lançadas para essa tarefa (para migração). */
+  async listSubmissions(
+    accessToken: string,
+    courseId: string,
+    courseWorkId: string,
+  ): Promise<ExistingSubmission[]> {
+    const response = await this.request(
+      accessToken,
+      'GET',
+      `${CLASSROOM_API_BASE}/courses/${courseId}/courseWork/${courseWorkId}/studentSubmissions`,
+    );
+    const body = (await response.json()) as {
+      studentSubmissions?: {
+        userId: string;
+        assignedGrade?: number;
+        late?: boolean;
+        state?: string;
+      }[];
+    };
+    return (body.studentSubmissions ?? []).map((s) => ({
+      googleUserId: s.userId,
+      assignedGrade: s.assignedGrade ?? null,
+      late: s.late ?? false,
+      state: s.state ?? 'CREATED',
+    }));
+  }
+
   private async request(
     accessToken: string,
     method: 'GET' | 'POST' | 'PATCH',
@@ -256,4 +334,19 @@ function toGoogleDate(iso: string): {
 function toGoogleTime(iso: string): { hours: number; minutes: number } {
   const date = new Date(iso);
   return { hours: date.getUTCHours(), minutes: date.getUTCMinutes() };
+}
+
+function fromGoogleDateTime(
+  date: { year: number; month: number; day: number },
+  time?: { hours?: number; minutes?: number },
+): string {
+  return new Date(
+    Date.UTC(
+      date.year,
+      date.month - 1,
+      date.day,
+      time?.hours ?? 0,
+      time?.minutes ?? 0,
+    ),
+  ).toISOString();
 }

@@ -133,7 +133,7 @@ O DoD global da v1 é o da seção 9 do documento de requisitos.
 ## 7. Status de implementação (código em `apps/api` e `apps/web`)
 
 As Fases 0-9 têm uma primeira implementação no branch `claude/pensive-dijkstra-3s3dva`,
-com build, lint e 107 testes unitários passando a cada commit. Resumo do que está
+com build, lint e 110 testes unitários passando a cada commit. Resumo do que está
 implementado de fato versus o que ficou simplificado ou pendente:
 
 **Completo**: Fase 0 (monorepo, CI, multi-tenancy), Fase 1 (RF-AUTH-01 a 04, RBAC/JWT —
@@ -157,20 +157,29 @@ Bimo e propaga best-effort para Classroom/Graph quando o id do aluno naquele pro
 é conhecido (capturado durante a reconciliação de roster da Fase 6). Isso também
 completou RF-STU-02 no portal do aluno.
 
+**Atualização pós-coursework**: RF-MIG-02/04 (importar histórico de tarefas/notas de
+uma turma migrada) e RF-REPORT-01 completo (taxa de entrega calculada de verdade a
+partir de Tarefa/Nota, não mais só um proxy via contingência) foram implementados.
+`MigrationService.importHistory` lê o histórico do lado já vinculado (Classroom e/ou
+Teams) e grava Tarefa+Nota de forma idempotente, sem tentar publicar essas tarefas
+antigas no lado recém-criado (ver código para o racional). O `ReportsService.
+turmaSummary` agora reporta total de alunos/tarefas, taxa de entrega e a quebra
+tarefas-só-Google/só-Microsoft/espelhadas — mas vale registrar uma limitação real do
+modelo de dados: `Nota` não guarda de qual plataforma a entrega chegou, só um status
+unificado, então a comparação "via Classroom vs via Teams" do requisito original é
+aproximada pela origem da *tarefa* (qual(is) id(s) externo(s) ela tem), não por
+entrega individual rastreada por origem.
+
 **Pendente, e por quê**: RF-SYNC-03 (conflito) continua sem um gatilho real — o
 motor de conflito genérico já existe e está testado desde a Fase 4, mas nada hoje
 detecta uma edição divergente vinda de fora (isso exigiria polling ou webhooks das
-duas APIs, RF-INT-06, ainda não implementado). RF-MIG-02/04 (importar histórico de
-tarefas/notas/materiais já existentes numa turma migrada) também não foram feitos —
-a infraestrutura de Tarefa/Nota agora existe para isso, falta só o código de leitura
-do histórico via GoogleClassroomClient/MicrosoftTeamsClient e a gravação idempotente
-correspondente. RF-REPORT-01 completo (taxa de entrega real Classroom vs Teams) pode
-ser calculado agora a partir de Tarefa/Nota, mas o `ReportsService.turmaSummary`
-ainda não foi atualizado para isso — é uma extensão pequena sobre o que já existe.
-A API de nota do Microsoft Graph (`MicrosoftTeamsClient.setGrade`/`createAssignment`)
-foi implementada com base no formato documentado publicamente, mas nunca testada
-contra um tenant EDU real — validar antes de produção, junto com a suposição de que
-o id da education class é o mesmo id do grupo/Team criado.
+duas APIs, RF-INT-06, ainda não implementado). A API de nota do Microsoft Graph
+(`MicrosoftTeamsClient.setGrade`/`createAssignment`/`listAssignments`/
+`listAssignmentSubmissions`) foi implementada com base no formato documentado
+publicamente, mas nunca testada contra um tenant EDU real — validar antes de
+produção, junto com a suposição de que o id da education class é o mesmo id do
+grupo/Team criado. RF-MIG-06 (migração em lote, Could) e RF-DASH-05/06 (links de
+chat nativo e resumo periódico no painel) continuam fora do escopo implementado.
 
 **Não executado nesta sessão** (exige ambiente real, não é código): teste de carga
 contra RNF-PERF-03 (script k6 em `apps/api/loadtest/`, pronto para rodar contra um

@@ -1,4 +1,5 @@
 import { ReportsService } from './reports.service';
+import { SubmissionStatus } from '../coursework/submission-status.enum';
 
 describe('ReportsService', () => {
   const turmaEspelhadaService = {
@@ -7,6 +8,9 @@ describe('ReportsService', () => {
   };
   const professorsService = { listByTenant: jest.fn() };
   const entregaContingenciaService = { listByTurma: jest.fn() };
+  const matriculaService = { listAlunoIdsByTurma: jest.fn() };
+  const tarefaService = { listByTurma: jest.fn() };
+  const notaService = { listByTarefa: jest.fn() };
 
   let service: ReportsService;
 
@@ -16,6 +20,9 @@ describe('ReportsService', () => {
       turmaEspelhadaService as any,
       professorsService as any,
       entregaContingenciaService as any,
+      matriculaService as any,
+      tarefaService as any,
+      notaService as any,
     );
   });
 
@@ -38,21 +45,66 @@ describe('ReportsService', () => {
     });
   });
 
-  it('turmaSummary devolve nome, status e volume de entregas por contingência', async () => {
+  it('turmaSummary calcula taxa de entrega real a partir de Tarefa/Nota (RF-REPORT-01)', async () => {
     turmaEspelhadaService.findById.mockResolvedValue({
       id: 'turma-1',
       name: 'Turma A',
       syncStatus: 'SYNCED',
     });
-    entregaContingenciaService.listByTurma.mockResolvedValue([{}, {}, {}]);
+    matriculaService.listAlunoIdsByTurma.mockResolvedValue([
+      'aluno-1',
+      'aluno-2',
+    ]);
+    tarefaService.listByTurma.mockResolvedValue([
+      {
+        id: 'tarefa-1',
+        googleCourseWorkId: 'cw1',
+        microsoftAssignmentId: 'a1',
+      },
+      {
+        id: 'tarefa-2',
+        googleCourseWorkId: 'cw2',
+        microsoftAssignmentId: null,
+      },
+    ]);
+    notaService.listByTarefa.mockImplementation(async (tarefaId: string) => {
+      if (tarefaId === 'tarefa-1') {
+        return [
+          { status: SubmissionStatus.SUBMITTED },
+          { status: SubmissionStatus.LATE },
+        ];
+      }
+      return [{ status: SubmissionStatus.MISSING }];
+    });
+    entregaContingenciaService.listByTurma.mockResolvedValue([{}]);
 
     const report = await service.turmaSummary('turma-1');
 
-    expect(report).toEqual({
-      turmaId: 'turma-1',
-      turmaName: 'Turma A',
+    expect(report.totalAlunos).toBe(2);
+    expect(report.totalTarefas).toBe(2);
+    expect(report.tarefasEspelhadas).toBe(1);
+    expect(report.tarefasSoGoogle).toBe(1);
+    expect(report.tarefasSoMicrosoft).toBe(0);
+    expect(report.entregasRegistradas).toBe(2);
+    // totalPossivel = 2 alunos * 2 tarefas = 4; 2 entregues => 50%
+    expect(report.taxaEntregaPercent).toBe(50);
+    expect(report.entregasPendentes).toBe(2);
+    expect(report.entregasContingencia).toBe(1);
+  });
+
+  it('turmaSummary lida com turma sem tarefas sem dividir por zero', async () => {
+    turmaEspelhadaService.findById.mockResolvedValue({
+      id: 'turma-1',
+      name: 'Turma A',
       syncStatus: 'SYNCED',
-      entregasContingencia: 3,
     });
+    matriculaService.listAlunoIdsByTurma.mockResolvedValue([]);
+    tarefaService.listByTurma.mockResolvedValue([]);
+    entregaContingenciaService.listByTurma.mockResolvedValue([]);
+
+    const report = await service.turmaSummary('turma-1');
+
+    expect(report.taxaEntregaPercent).toBe(0);
+    expect(report.entregasPendentes).toBe(0);
   });
 });

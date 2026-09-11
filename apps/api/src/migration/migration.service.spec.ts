@@ -25,7 +25,12 @@ describe('MigrationService', () => {
   };
   const syncQueueService = { enqueue: jest.fn().mockResolvedValue(undefined) };
   const alunosService = { findOrCreateByInstitutionalEmail: jest.fn() };
-  const matriculaService = { enroll: jest.fn().mockResolvedValue(undefined) };
+  const matriculaService = {
+    enroll: jest.fn().mockResolvedValue(undefined),
+    listByTurma: jest.fn().mockResolvedValue([]),
+  };
+  const tarefaService = { importFromExternal: jest.fn() };
+  const notaService = { setGrade: jest.fn().mockResolvedValue(undefined) };
 
   let service: MigrationService;
 
@@ -51,6 +56,8 @@ describe('MigrationService', () => {
       syncQueueService as any,
       alunosService as any,
       matriculaService as any,
+      tarefaService as any,
+      notaService as any,
     );
   });
 
@@ -166,5 +173,116 @@ describe('MigrationService', () => {
     expect(result.onlyMicrosoft).toEqual(['c@escola.edu.br']);
     expect(result.both).toEqual(['b@escola.edu.br']);
     expect(matriculaService.enroll).toHaveBeenCalledTimes(3);
+  });
+
+  it('importHistory importa tarefas dos dois lados e lança nota de quem já está matriculado (RF-MIG-02)', async () => {
+    turmaEspelhadaService.findById.mockResolvedValue({
+      id: 'turma-1',
+      googleCourseId: 'c1',
+      microsoftTeamId: 't1',
+    });
+    matriculaService.listByTurma.mockResolvedValue([
+      { alunoId: 'aluno-a', googleUserId: 'g-a', microsoftUserId: 'm-a' },
+    ]);
+    (googleClassroomClient as any).listCourseWork = jest
+      .fn()
+      .mockResolvedValue([
+        {
+          externalId: 'cw1',
+          title: 'Tarefa Google',
+          description: null,
+          dueDateIso: null,
+          points: 10,
+          materialLinks: [],
+        },
+      ]);
+    (googleClassroomClient as any).listSubmissions = jest
+      .fn()
+      .mockResolvedValue([
+        {
+          googleUserId: 'g-a',
+          assignedGrade: 8,
+          late: false,
+          state: 'TURNED_IN',
+        },
+      ]);
+    (microsoftTeamsClient as any).listAssignments = jest
+      .fn()
+      .mockResolvedValue([
+        {
+          externalId: 'a1',
+          title: 'Tarefa Microsoft',
+          description: null,
+          dueDateIso: null,
+          points: 10,
+          materialLinks: [],
+        },
+      ]);
+    (microsoftTeamsClient as any).listAssignmentSubmissions = jest
+      .fn()
+      .mockResolvedValue([
+        { microsoftUserId: 'm-a', points: 7, status: 'returned' },
+      ]);
+    tarefaService.importFromExternal.mockImplementation(async (input: any) => ({
+      id: `tarefa-${input.title}`,
+      ...input,
+    }));
+
+    const result = await withTenant(() =>
+      service.importHistory('turma-1', 'prof-1'),
+    );
+
+    expect(result.tarefasImportadas).toBe(2);
+    expect(notaService.setGrade).toHaveBeenCalledWith(
+      'tarefa-Tarefa Google',
+      'aluno-a',
+      'prof-1',
+      {
+        grade: 8,
+        status: 'SUBMITTED',
+      },
+    );
+    expect(notaService.setGrade).toHaveBeenCalledWith(
+      'tarefa-Tarefa Microsoft',
+      'aluno-a',
+      'prof-1',
+      { grade: 7 },
+    );
+  });
+
+  it('importHistory ignora entrega de aluno sem matrícula mapeada naquele provedor', async () => {
+    turmaEspelhadaService.findById.mockResolvedValue({
+      id: 'turma-1',
+      googleCourseId: 'c1',
+      microsoftTeamId: null,
+    });
+    matriculaService.listByTurma.mockResolvedValue([]);
+    (googleClassroomClient as any).listCourseWork = jest
+      .fn()
+      .mockResolvedValue([
+        {
+          externalId: 'cw1',
+          title: 'Tarefa Google',
+          description: null,
+          dueDateIso: null,
+          points: 10,
+          materialLinks: [],
+        },
+      ]);
+    (googleClassroomClient as any).listSubmissions = jest
+      .fn()
+      .mockResolvedValue([
+        {
+          googleUserId: 'g-desconhecido',
+          assignedGrade: 8,
+          late: false,
+          state: 'TURNED_IN',
+        },
+      ]);
+    tarefaService.importFromExternal.mockResolvedValue({ id: 'tarefa-1' });
+
+    await withTenant(() => service.importHistory('turma-1', 'prof-1'));
+
+    expect(notaService.setGrade).not.toHaveBeenCalled();
   });
 });

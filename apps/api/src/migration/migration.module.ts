@@ -5,6 +5,7 @@ import { SyncQueueModule } from '../sync-queue/sync-queue.module';
 import { GoogleClassroomModule } from '../integrations/google/google-classroom.module';
 import { MicrosoftTeamsModule } from '../integrations/microsoft/microsoft-teams.module';
 import { AlunoModule } from '../aluno/aluno.module';
+import { CourseworkModule } from '../coursework/coursework.module';
 import { MigrationService } from './migration.service';
 import { MigrationController } from './migration.controller';
 import {
@@ -20,6 +21,7 @@ import {
     GoogleClassroomModule,
     MicrosoftTeamsModule,
     AlunoModule,
+    CourseworkModule,
   ],
   controllers: [MigrationController],
   providers: [
