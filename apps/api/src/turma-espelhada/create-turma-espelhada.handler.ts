@@ -73,6 +73,8 @@ export class CreateTurmaEspelhadaHandler implements SyncJobHandler {
       await this.turmaEspelhadaService.markSynced(turma.id, {
         googleCourseId: course.externalId,
         microsoftTeamId: team.externalId,
+        googleCourseUrl: course.alternateLink,
+        microsoftTeamUrl: team.webUrl,
       });
     } catch (error) {
       await this.turmaEspelhadaService.markError(

@@ -40,6 +40,8 @@ describe('MicrosoftTeamsClient (contract)', () => {
     expect(result).toEqual({
       externalId: '72f988bf-0000-1111-2222-2d7cd011db47',
       name: 'Turma Exemplo - Matemática',
+      webUrl:
+        'https://teams.microsoft.com/l/team/19%3Aabcdef1234567890%40thread.tacv2/conversations',
     });
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(fetchMock.mock.calls[0][0]).toContain('/groups');

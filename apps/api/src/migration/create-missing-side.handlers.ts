@@ -51,6 +51,7 @@ export class CreateMissingMicrosoftTeamHandler implements SyncJobHandler {
         turma.id,
         'MICROSOFT',
         team.externalId,
+        team.webUrl,
       );
     } catch (error) {
       await this.turmaEspelhadaService.markError(
@@ -95,6 +96,7 @@ export class CreateMissingGoogleCourseHandler implements SyncJobHandler {
         turma.id,
         'GOOGLE',
         course.externalId,
+        course.alternateLink,
       );
     } catch (error) {
       await this.turmaEspelhadaService.markError(

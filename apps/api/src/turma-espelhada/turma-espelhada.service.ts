@@ -89,7 +89,12 @@ export class TurmaEspelhadaService {
 
   async markSynced(
     id: string,
-    ids: { googleCourseId: string; microsoftTeamId: string },
+    ids: {
+      googleCourseId: string;
+      microsoftTeamId: string;
+      googleCourseUrl?: string | null;
+      microsoftTeamUrl?: string | null;
+    },
   ): Promise<void> {
     const tenantId = TenantContext.getTenantId();
     await this.repository.update(
@@ -97,6 +102,8 @@ export class TurmaEspelhadaService {
       {
         googleCourseId: ids.googleCourseId,
         microsoftTeamId: ids.microsoftTeamId,
+        googleCourseUrl: ids.googleCourseUrl ?? null,
+        microsoftTeamUrl: ids.microsoftTeamUrl ?? null,
         syncStatus: SyncStatus.SYNCED,
         lastError: null,
       },
@@ -158,12 +165,16 @@ export class TurmaEspelhadaService {
     id: string,
     side: 'GOOGLE' | 'MICROSOFT',
     externalId: string,
+    externalUrl?: string | null,
   ): Promise<TurmaEspelhada> {
     const tenantId = TenantContext.getTenantId();
     const patch =
       side === 'GOOGLE'
-        ? { googleCourseId: externalId }
-        : { microsoftTeamId: externalId };
+        ? { googleCourseId: externalId, googleCourseUrl: externalUrl ?? null }
+        : {
+            microsoftTeamId: externalId,
+            microsoftTeamUrl: externalUrl ?? null,
+          };
     await this.repository.update({ id, tenantId }, patch);
 
     const turma = await this.findById(id);

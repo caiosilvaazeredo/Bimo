@@ -35,6 +35,14 @@ export class TurmaEspelhada {
   @Column({ name: 'microsoft_team_id', nullable: true })
   microsoftTeamId: string | null;
 
+  /** RF-DASH-05: link nativo para abrir a turma direto no Classroom. */
+  @Column({ name: 'google_course_url', nullable: true })
+  googleCourseUrl: string | null;
+
+  /** RF-DASH-05: link nativo para abrir o Team direto no Teams. */
+  @Column({ name: 'microsoft_team_url', nullable: true })
+  microsoftTeamUrl: string | null;
+
   @Column({ type: 'varchar', enum: SyncStatus, default: SyncStatus.SYNCING })
   syncStatus: SyncStatus;
 

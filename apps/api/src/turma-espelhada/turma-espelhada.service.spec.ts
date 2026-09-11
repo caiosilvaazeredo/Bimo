@@ -98,6 +98,8 @@ describe('TurmaEspelhadaService', () => {
       service.markSynced(turma.id, {
         googleCourseId: 'course-1',
         microsoftTeamId: 'team-1',
+        googleCourseUrl: 'https://classroom.google.com/c/course-1',
+        microsoftTeamUrl: 'https://teams.microsoft.com/l/team/team-1',
       }),
     );
 
@@ -105,6 +107,34 @@ describe('TurmaEspelhadaService', () => {
     expect(updated.syncStatus).toBe(SyncStatus.SYNCED);
     expect(updated.googleCourseId).toBe('course-1');
     expect(updated.microsoftTeamId).toBe('team-1');
+    expect(updated.googleCourseUrl).toBe(
+      'https://classroom.google.com/c/course-1',
+    );
+    expect(updated.microsoftTeamUrl).toBe(
+      'https://teams.microsoft.com/l/team/team-1',
+    );
+  });
+
+  it('markSideSynced grava o link nativo do lado sincronizado (RF-DASH-05)', async () => {
+    externalAccountsService.hasProvider.mockResolvedValue(true);
+    const turma = await withTenant(() =>
+      service.create({ professorId: 'prof-1', name: 'Turma A' }),
+    );
+
+    await withTenant(() =>
+      service.markSideSynced(
+        turma.id,
+        'GOOGLE',
+        'course-1',
+        'https://classroom.google.com/c/course-1',
+      ),
+    );
+
+    const updated = repository._store.get(turma.id);
+    expect(updated.googleCourseId).toBe('course-1');
+    expect(updated.googleCourseUrl).toBe(
+      'https://classroom.google.com/c/course-1',
+    );
   });
 
   it('markError marca status ERROR com a mensagem', async () => {

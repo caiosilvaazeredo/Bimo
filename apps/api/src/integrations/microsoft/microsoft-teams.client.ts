@@ -11,6 +11,8 @@ export class GraphApiRateLimitedError extends Error {
 export interface CreatedTeam {
   externalId: string;
   name: string;
+  /** RF-DASH-05: link nativo para abrir o Team direto no app do Teams. */
+  webUrl: string | null;
 }
 
 interface GroupInfo {
@@ -74,8 +76,8 @@ export class MicrosoftTeamsClient {
     input: { name: string; description?: string },
   ): Promise<CreatedTeam> {
     const group = await this.createGroup(accessToken, input);
-    await this.createTeamFromGroup(accessToken, group.id);
-    return { externalId: group.id, name: group.displayName };
+    const webUrl = await this.createTeamFromGroup(accessToken, group.id);
+    return { externalId: group.id, name: group.displayName, webUrl };
   }
 
   /** RF-MIG-01: busca um Team/grupo já existente para vincular. */
@@ -327,13 +329,17 @@ export class MicrosoftTeamsClient {
   private async createTeamFromGroup(
     accessToken: string,
     groupId: string,
-  ): Promise<void> {
-    await this.request(
+  ): Promise<string | null> {
+    const response = await this.request(
       accessToken,
       'POST',
       `${GRAPH_API_BASE}/groups/${groupId}/team`,
       {},
     );
+    const body = (await response.json().catch(() => null)) as {
+      webUrl?: string;
+    } | null;
+    return body?.webUrl ?? null;
   }
 
   private async request(

@@ -11,6 +11,8 @@ export interface TurmaEspelhada {
   syncStatus: "SYNCING" | "SYNCED" | "CONFLICT" | "ERROR";
   googleCourseId: string | null;
   microsoftTeamId: string | null;
+  googleCourseUrl: string | null;
+  microsoftTeamUrl: string | null;
   lastError: string | null;
 }
 

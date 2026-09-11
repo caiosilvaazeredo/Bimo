@@ -125,8 +125,32 @@ export default function TurmasPage() {
               <tr key={turma.id}>
                 <td style={cellStyle}>{turma.name}</td>
                 <td style={cellStyle}>{STATUS_LABEL[turma.syncStatus]}</td>
-                <td style={cellStyle}>{turma.googleCourseId ? "Criado" : "Pendente"}</td>
-                <td style={cellStyle}>{turma.microsoftTeamId ? "Criado" : "Pendente"}</td>
+                <td style={cellStyle}>
+                  {turma.googleCourseId ? (
+                    turma.googleCourseUrl ? (
+                      <a href={turma.googleCourseUrl} target="_blank" rel="noreferrer">
+                        Abrir no Classroom
+                      </a>
+                    ) : (
+                      "Criado"
+                    )
+                  ) : (
+                    "Pendente"
+                  )}
+                </td>
+                <td style={cellStyle}>
+                  {turma.microsoftTeamId ? (
+                    turma.microsoftTeamUrl ? (
+                      <a href={turma.microsoftTeamUrl} target="_blank" rel="noreferrer">
+                        Abrir no Teams
+                      </a>
+                    ) : (
+                      "Criado"
+                    )
+                  ) : (
+                    "Pendente"
+                  )}
+                </td>
               </tr>
             ))}
           </tbody>

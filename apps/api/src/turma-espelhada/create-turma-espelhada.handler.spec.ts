@@ -51,6 +51,7 @@ describe('CreateTurmaEspelhadaHandler', () => {
     microsoftTeamsClient.createTeam.mockResolvedValue({
       externalId: 'team-1',
       name: 'Turma A',
+      webUrl: 'https://teams.microsoft.com/l/team/team-1',
     });
 
     await handler.handle({
@@ -72,6 +73,8 @@ describe('CreateTurmaEspelhadaHandler', () => {
     expect(turmaEspelhadaService.markSynced).toHaveBeenCalledWith('turma-1', {
       googleCourseId: 'course-1',
       microsoftTeamId: 'team-1',
+      googleCourseUrl: null,
+      microsoftTeamUrl: 'https://teams.microsoft.com/l/team/team-1',
     });
     expect(turmaEspelhadaService.markError).not.toHaveBeenCalled();
   });

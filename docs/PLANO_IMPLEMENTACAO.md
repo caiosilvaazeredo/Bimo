@@ -133,7 +133,7 @@ O DoD global da v1 é o da seção 9 do documento de requisitos.
 ## 7. Status de implementação (código em `apps/api` e `apps/web`)
 
 As Fases 0-9 têm uma primeira implementação no branch `claude/pensive-dijkstra-3s3dva`,
-com build, lint e 114 testes unitários passando a cada commit. Resumo do que está
+com build, lint e 115 testes unitários passando a cada commit. Resumo do que está
 implementado de fato versus o que ficou simplificado ou pendente:
 
 **Completo**: Fase 0 (monorepo, CI, multi-tenancy), Fase 1 (RF-AUTH-01 a 04, RBAC/JWT —
@@ -189,8 +189,21 @@ segue não implementado, pelo motivo acima. A API de nota do Microsoft Graph
 `listAssignmentSubmissions`) foi implementada com base no formato documentado
 publicamente, mas nunca testada contra um tenant EDU real — validar antes de
 produção, junto com a suposição de que o id da education class é o mesmo id do
-grupo/Team criado. RF-MIG-06 (migração em lote, Could) e RF-DASH-05/06 (links de
-chat nativo e resumo periódico no painel) continuam fora do escopo implementado.
+grupo/Team criado. RF-MIG-06 (migração em lote, Could) e RF-DASH-06 (resumo
+periódico no painel) continuam fora do escopo implementado.
+
+**Atualização RF-DASH-05**: `TurmaEspelhada` agora grava `googleCourseUrl`
+(`alternateLink` do Classroom) e `microsoftTeamUrl` (`webUrl` retornado ao criar o
+Team a partir do grupo no Graph) nos dois fluxos de criação — criação nova
+(`CreateTurmaEspelhadaHandler`) e criação do lado que faltava numa migração
+(`CreateMissingGoogleCourseHandler`/`CreateMissingMicrosoftTeamHandler`). O painel
+Next.js (`/turmas`) mostra "Abrir no Classroom"/"Abrir no Teams" como link quando o
+id e a URL existem. **Limitação conhecida**: quando `MigrationService.linkExisting`
+vincula uma turma que já existe nos dois lados (`createLinked`), nenhuma URL é
+capturada — `resolveName` só busca nome via `getCourse`/`getGroup`, que não expõem
+os campos de link; nesse caso a coluna fica nula e o painel volta a mostrar apenas
+"Criado". Não é um caminho comum (a maioria das turmas nasce pelo fluxo normal ou
+com um lado faltando), mas fica registrado como pendência caso vire prioridade.
 
 **Não executado nesta sessão** (exige ambiente real, não é código): teste de carga
 contra RNF-PERF-03 (script k6 em `apps/api/loadtest/`, pronto para rodar contra um
