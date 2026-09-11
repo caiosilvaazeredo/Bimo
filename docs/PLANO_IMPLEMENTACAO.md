@@ -133,28 +133,44 @@ O DoD global da v1 é o da seção 9 do documento de requisitos.
 ## 7. Status de implementação (código em `apps/api` e `apps/web`)
 
 As Fases 0-9 têm uma primeira implementação no branch `claude/pensive-dijkstra-3s3dva`,
-com build, lint e 90 testes unitários passando a cada commit. Resumo do que está
+com build, lint e 107 testes unitários passando a cada commit. Resumo do que está
 implementado de fato versus o que ficou simplificado ou pendente:
 
 **Completo**: Fase 0 (monorepo, CI, multi-tenancy), Fase 1 (RF-AUTH-01 a 04, RBAC/JWT —
 RF-AUTH-05 SSO institucional fica para quando algum tenant piloto exigir), Fase 2
-núcleo (fila de sincronização, integração Google/Microsoft isolada com contract
-tests, criação de turma espelhada com retry/backoff), Fase 3 slice inicial (login e
-painel de turmas no Next.js — falta revisão WCAG a fundo, links de chat nativo e
-resumo periódico), Fase 4 (log de auditoria, conflitos, notificações), Fase 5
-(portal do aluno e contingência — RF-STU-04 detecção automática de sinais fica para
-depois), Fase 6 (migração de turmas existentes), Fase 7 (administração
-institucional), Fase 8 (billing de aluno ativo e relatórios), Fase 9 (exclusão
-individual de dados via LGPD/RNF-PRIV-03).
+completa (fila de sincronização, integração Google/Microsoft isolada com contract
+tests, criação de turma espelhada com retry/backoff, e agora também publicação/edição
+de tarefas — RF-SYNC-01/02 — e materiais por link — RF-INT-04), Fase 3 slice inicial
+(login e painel de turmas no Next.js — falta revisão WCAG a fundo, links de chat
+nativo e resumo periódico), Fase 4 (log de auditoria, conflitos, notificações), Fase 5
+completa (portal do aluno e contingência, incluindo tarefas/notas em modo leitura —
+RF-STU-02 — RF-STU-04 detecção automática de sinais fica para depois), Fase 6
+(migração de turmas existentes, com roster capturando o id do aluno em cada
+provedor), Fase 7 (administração institucional), Fase 8 (billing de aluno ativo e
+relatórios), Fase 9 (exclusão individual de dados via LGPD/RNF-PRIV-03).
 
-**Pendente, e por quê**: RF-SYNC-01/02/04 (publicar/editar coursework e notas) e
-RF-INT-04 (materiais por referência) não foram implementados — são a peça que falta
-para completar várias outras: RF-STU-02 (tarefas/notas no portal), RF-REPORT-01
-completo (taxa de entrega real), RF-MIG-02/04 (importar histórico de tarefas/notas/
-materiais) e o gatilho real de RF-SYNC-03 (o motor de conflito já existe e está
-testado, só falta algo que o dispare). Recomenda-se essa camada de coursework como
-próximo bloco de trabalho, por destravar o maior número de requisitos pendentes de
-uma vez.
+Depois do fechamento das 6 fases, a camada de coursework foi implementada como
+trabalho adicional (não fazia parte das fases originais, mas era o maior bloqueio
+identificado): **Tarefa** (RF-SYNC-01/02, RF-INT-04) publica e edita coursework nas
+duas plataformas via a mesma fila/worker; **Nota** (RF-SYNC-04) lança nota uma vez no
+Bimo e propaga best-effort para Classroom/Graph quando o id do aluno naquele provedor
+é conhecido (capturado durante a reconciliação de roster da Fase 6). Isso também
+completou RF-STU-02 no portal do aluno.
+
+**Pendente, e por quê**: RF-SYNC-03 (conflito) continua sem um gatilho real — o
+motor de conflito genérico já existe e está testado desde a Fase 4, mas nada hoje
+detecta uma edição divergente vinda de fora (isso exigiria polling ou webhooks das
+duas APIs, RF-INT-06, ainda não implementado). RF-MIG-02/04 (importar histórico de
+tarefas/notas/materiais já existentes numa turma migrada) também não foram feitos —
+a infraestrutura de Tarefa/Nota agora existe para isso, falta só o código de leitura
+do histórico via GoogleClassroomClient/MicrosoftTeamsClient e a gravação idempotente
+correspondente. RF-REPORT-01 completo (taxa de entrega real Classroom vs Teams) pode
+ser calculado agora a partir de Tarefa/Nota, mas o `ReportsService.turmaSummary`
+ainda não foi atualizado para isso — é uma extensão pequena sobre o que já existe.
+A API de nota do Microsoft Graph (`MicrosoftTeamsClient.setGrade`/`createAssignment`)
+foi implementada com base no formato documentado publicamente, mas nunca testada
+contra um tenant EDU real — validar antes de produção, junto com a suposição de que
+o id da education class é o mesmo id do grupo/Team criado.
 
 **Não executado nesta sessão** (exige ambiente real, não é código): teste de carga
 contra RNF-PERF-03 (script k6 em `apps/api/loadtest/`, pronto para rodar contra um

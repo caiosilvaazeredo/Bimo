@@ -33,6 +33,7 @@ import { BillingModule } from './billing/billing.module';
 import { PrivacyModule } from './privacy/privacy.module';
 import { CourseworkModule } from './coursework/coursework.module';
 import { Tarefa } from './coursework/tarefa.entity';
+import { Nota } from './coursework/nota.entity';
 
 const JWT_SCOPED_ROUTES = [
   'turmas-espelhadas',
@@ -85,6 +86,7 @@ const NO_TENANT_ROUTES = ['admin/tenants'];
           Matricula,
           EntregaContingencia,
           Tarefa,
+          Nota,
         ],
         synchronize: false,
         autoLoadEntities: true,
