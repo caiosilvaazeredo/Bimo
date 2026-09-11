@@ -8,13 +8,14 @@ export default function LoginPage() {
 
   const canSubmit = tenantSlug.trim().length > 0;
 
-  function buildOAuthUrl(provider: "google" | "microsoft"): string {
+  function goToOAuth(provider: "google" | "microsoft") {
+    if (!canSubmit) return;
     const params = new URLSearchParams({ tenant: tenantSlug.trim() });
-    return `${getApiBaseUrl()}/auth/${provider}?${params.toString()}`;
+    window.location.href = `${getApiBaseUrl()}/auth/${provider}?${params.toString()}`;
   }
 
   return (
-    <main style={{ maxWidth: 420, margin: "4rem auto", padding: "0 1rem" }}>
+    <main id="main-content" style={{ maxWidth: 420, margin: "4rem auto", padding: "0 1rem" }}>
       <h1>Entrar no Bimo</h1>
       <p>
         Informe o identificador da sua instituição e escolha a conta com a qual você já usa o
@@ -35,35 +36,41 @@ export default function LoginPage() {
           />
         </div>
 
-        <a
-          href={canSubmit ? buildOAuthUrl("google") : undefined}
-          aria-disabled={!canSubmit}
+        <button
+          type="button"
+          onClick={() => goToOAuth("google")}
+          disabled={!canSubmit}
           style={{
             padding: "0.75rem",
             textAlign: "center",
             border: "1px solid #ccc",
             borderRadius: 4,
-            pointerEvents: canSubmit ? "auto" : "none",
+            background: "white",
+            font: "inherit",
+            cursor: canSubmit ? "pointer" : "not-allowed",
             opacity: canSubmit ? 1 : 0.5,
           }}
         >
           Entrar com Google
-        </a>
+        </button>
 
-        <a
-          href={canSubmit ? buildOAuthUrl("microsoft") : undefined}
-          aria-disabled={!canSubmit}
+        <button
+          type="button"
+          onClick={() => goToOAuth("microsoft")}
+          disabled={!canSubmit}
           style={{
             padding: "0.75rem",
             textAlign: "center",
             border: "1px solid #ccc",
             borderRadius: 4,
-            pointerEvents: canSubmit ? "auto" : "none",
+            background: "white",
+            font: "inherit",
+            cursor: canSubmit ? "pointer" : "not-allowed",
             opacity: canSubmit ? 1 : 0.5,
           }}
         >
           Entrar com Microsoft
-        </a>
+        </button>
       </form>
     </main>
   );

@@ -40,3 +40,26 @@ a {
     color-scheme: dark;
   }
 }
+
+/* RNF-UX-01: indicador de foco visível para navegação por teclado. */
+:focus-visible {
+  outline: 2px solid #1a73e8;
+  outline-offset: 2px;
+}
+
+/* RNF-UX-01: link "pular para o conteúdo", só aparece com foco de teclado. */
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: 100;
+  padding: 0.75rem 1rem;
+  background: var(--background);
+  color: var(--foreground);
+  border: 2px solid #1a73e8;
+}
+
+.skip-link:focus {
+  left: 0.5rem;
+  top: 0.5rem;
+}

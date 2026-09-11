@@ -18,13 +18,24 @@ function CallbackHandler() {
     }
   }, [router, searchParams]);
 
-  return <p>Entrando...</p>;
+  return (
+    <p role="status" aria-live="polite">
+      Entrando...
+    </p>
+  );
 }
 
 export default function AuthCallbackPage() {
   return (
-    <main style={{ maxWidth: 420, margin: "4rem auto", padding: "0 1rem" }}>
-      <Suspense fallback={<p>Entrando...</p>}>
+    <main id="main-content" style={{ maxWidth: 420, margin: "4rem auto", padding: "0 1rem" }}>
+      <h1>Bimo</h1>
+      <Suspense
+        fallback={
+          <p role="status" aria-live="polite">
+            Entrando...
+          </p>
+        }
+      >
         <CallbackHandler />
       </Suspense>
     </main>

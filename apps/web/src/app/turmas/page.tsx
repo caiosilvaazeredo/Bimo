@@ -68,7 +68,7 @@ export default function TurmasPage() {
   }
 
   return (
-    <main style={{ maxWidth: 720, margin: "2rem auto", padding: "0 1rem" }}>
+    <main id="main-content" style={{ maxWidth: 720, margin: "2rem auto", padding: "0 1rem" }}>
       <h1>Minhas turmas espelhadas</h1>
 
       <form
@@ -106,18 +106,25 @@ export default function TurmasPage() {
         </p>
       )}
 
+      <p role="status" aria-live="polite" style={visuallyHidden}>
+        {loading
+          ? "Carregando turmas..."
+          : `${turmas.length} turma${turmas.length === 1 ? "" : "s"} carregada${turmas.length === 1 ? "" : "s"}.`}
+      </p>
+
       {loading ? (
         <p>Carregando...</p>
       ) : turmas.length === 0 ? (
         <p>Nenhuma turma espelhada ainda.</p>
       ) : (
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
+          <caption style={visuallyHidden}>Minhas turmas espelhadas e status de sincronização</caption>
           <thead>
             <tr>
-              <th style={cellStyle}>Turma</th>
-              <th style={cellStyle}>Status</th>
-              <th style={cellStyle}>Google</th>
-              <th style={cellStyle}>Microsoft</th>
+              <th scope="col" style={cellStyle}>Turma</th>
+              <th scope="col" style={cellStyle}>Status</th>
+              <th scope="col" style={cellStyle}>Google</th>
+              <th scope="col" style={cellStyle}>Microsoft</th>
             </tr>
           </thead>
           <tbody>
@@ -130,6 +137,7 @@ export default function TurmasPage() {
                     turma.googleCourseUrl ? (
                       <a href={turma.googleCourseUrl} target="_blank" rel="noreferrer">
                         Abrir no Classroom
+                        <span style={visuallyHidden}> (abre em nova aba)</span>
                       </a>
                     ) : (
                       "Criado"
@@ -143,6 +151,7 @@ export default function TurmasPage() {
                     turma.microsoftTeamUrl ? (
                       <a href={turma.microsoftTeamUrl} target="_blank" rel="noreferrer">
                         Abrir no Teams
+                        <span style={visuallyHidden}> (abre em nova aba)</span>
                       </a>
                     ) : (
                       "Criado"
@@ -164,4 +173,17 @@ const cellStyle: React.CSSProperties = {
   textAlign: "left",
   padding: "0.5rem",
   borderBottom: "1px solid #ddd",
+};
+
+/** RNF-UX-01: some visualmente mas fica disponível para leitores de tela. */
+const visuallyHidden: React.CSSProperties = {
+  position: "absolute",
+  width: 1,
+  height: 1,
+  padding: 0,
+  margin: -1,
+  overflow: "hidden",
+  clip: "rect(0, 0, 0, 0)",
+  whiteSpace: "nowrap",
+  border: 0,
 };

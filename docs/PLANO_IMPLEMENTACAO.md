@@ -192,6 +192,20 @@ produção, junto com a suposição de que o id da education class é o mesmo id
 grupo/Team criado. RF-MIG-06 (migração em lote, Could) continua fora do escopo
 implementado.
 
+**Atualização RNF-UX-01**: primeira rodada de correções de acessibilidade nas
+4 páginas do painel (`/`, `/login`, `/turmas`, `/auth/callback`). Trocados os
+botões "Entrar com Google/Microsoft" de `<a>` com `pointerEvents:none` (não
+focáveis nem anunciados como desabilitados por leitor de tela) para
+`<button disabled>` reais; adicionado `role="status" aria-live="polite"` nos
+estados "Carregando.../Entrando..." (antes silenciosos para leitor de tela);
+tabela de turmas ganhou `<caption>` e `scope="col"` nos `<th>`; links
+"Abrir no Classroom/Teams" (`target="_blank"`) ganharam texto oculto "(abre em
+nova aba)"; adicionado skip-link "Pular para o conteúdo" e `:focus-visible`
+global (antes inexistente, dependia só do outline padrão do navegador).
+**Não é uma auditoria WCAG 2.1 AA completa** — não houve teste com leitor de
+tela real (NVDA/VoiceOver) nem checagem de contraste automatizada
+(axe-core/Lighthouse); fica como validação pendente antes de produção.
+
 **Atualização RF-DASH-06**: resumo periódico semanal por professor
 implementado via `PeriodicSummaryService` (`apps/api/src/billing/`), usando
 `@nestjs/schedule` (`@Cron(CronExpression.EVERY_WEEK)`). Para cada tenant
