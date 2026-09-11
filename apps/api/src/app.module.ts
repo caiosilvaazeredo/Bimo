@@ -22,6 +22,11 @@ import { ConflictModule } from './conflict/conflict.module';
 import { SyncConflict } from './conflict/sync-conflict.entity';
 import { NotificationsModule } from './notifications/notifications.module';
 import { Notification } from './notifications/notification.entity';
+import { AlunoModule } from './aluno/aluno.module';
+import { Aluno } from './aluno/aluno.entity';
+import { Matricula } from './aluno/matricula.entity';
+import { EntregaContingencia } from './aluno/entrega-contingencia.entity';
+import { PortalModule } from './portal/portal.module';
 
 const JWT_SCOPED_ROUTES = [
   'turmas-espelhadas',
@@ -30,6 +35,8 @@ const JWT_SCOPED_ROUTES = [
   'conflicts/(.*)',
   'notifications',
   'notifications/(.*)',
+  'portal',
+  'portal/(.*)',
 ];
 
 @Module({
@@ -53,6 +60,9 @@ const JWT_SCOPED_ROUTES = [
           TurmaEspelhada,
           SyncConflict,
           Notification,
+          Aluno,
+          Matricula,
+          EntregaContingencia,
         ],
         synchronize: false,
         autoLoadEntities: true,
@@ -67,6 +77,8 @@ const JWT_SCOPED_ROUTES = [
     TurmaEspelhadaModule,
     ConflictModule,
     NotificationsModule,
+    AlunoModule,
+    PortalModule,
     WorkersModule,
   ],
   controllers: [AppController],

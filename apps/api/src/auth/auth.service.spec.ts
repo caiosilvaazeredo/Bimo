@@ -52,6 +52,7 @@ describe('AuthService', () => {
 
   const oauthProfile: OAuthProfile = {
     tenantSlug: 'escola-exemplo',
+    role: 'PROFESSOR',
     email: 'prof@escola.edu.br',
     displayName: 'Prof. Exemplo',
     accessToken: 'access-token',
@@ -92,6 +93,7 @@ describe('AuthService', () => {
       sub: professor.id,
       tenantId: tenant.id,
       role: professor.role,
+      kind: 'PROFESSOR',
     });
   });
 });

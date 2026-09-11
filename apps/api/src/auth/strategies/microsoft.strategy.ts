@@ -79,7 +79,7 @@ export class MicrosoftStrategy extends PassportStrategy(
     done: (err: unknown, user?: OAuthProfile) => void,
   ) {
     try {
-      const { tenantSlug } = decodeOAuthState(
+      const { tenantSlug, role } = decodeOAuthState(
         req.query.state as string | undefined,
       );
       const email = profile.mail ?? profile.userPrincipalName;
@@ -89,6 +89,7 @@ export class MicrosoftStrategy extends PassportStrategy(
 
       const oauthProfile: OAuthProfile = {
         tenantSlug,
+        role,
         email,
         displayName: profile.displayName ?? email,
         accessToken,

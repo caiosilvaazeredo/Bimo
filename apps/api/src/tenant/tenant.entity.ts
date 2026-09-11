@@ -19,6 +19,10 @@ export class Tenant {
   @Column({ default: true })
   active: boolean;
 
+  /** RF-STU-06: a instituição pode desligar o acesso de contingência do aluno. */
+  @Column({ name: 'contingency_enabled', default: true })
+  contingencyEnabled: boolean;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 }

@@ -46,7 +46,7 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
     done: VerifyCallback,
   ) {
     try {
-      const { tenantSlug } = decodeOAuthState(
+      const { tenantSlug, role } = decodeOAuthState(
         req.query.state as string | undefined,
       );
       const email = profile.emails?.[0]?.value;
@@ -59,6 +59,7 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
 
       const oauthProfile: OAuthProfile = {
         tenantSlug,
+        role,
         email,
         displayName: profile.displayName ?? email,
         accessToken,

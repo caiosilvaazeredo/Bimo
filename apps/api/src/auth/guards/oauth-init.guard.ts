@@ -8,8 +8,9 @@ import { Request } from 'express';
 import { encodeOAuthState } from '../oauth-state';
 
 /**
- * Injeta o tenant (slug recebido em ?tenant=) no parâmetro `state` do
- * fluxo OAuth, para que o callback consiga resolver o tenant mesmo sem
+ * Injeta o tenant (slug recebido em ?tenant=) e o papel pretendido
+ * (?role=PROFESSOR|ALUNO, default PROFESSOR) no parâmetro `state` do
+ * fluxo OAuth, para que o callback consiga resolver os dois mesmo sem
  * o header x-tenant-slug (que não existe em um redirect de navegador).
  */
 function buildOAuthInitGuard(strategyName: string) {
@@ -23,7 +24,8 @@ function buildOAuthInitGuard(strategyName: string) {
           'Parâmetro de query "tenant" é obrigatório para iniciar o login OAuth',
         );
       }
-      return { state: encodeOAuthState({ tenantSlug }) };
+      const role = req.query.role === 'ALUNO' ? 'ALUNO' : 'PROFESSOR';
+      return { state: encodeOAuthState({ tenantSlug, role }) };
     }
   }
   return OAuthInitGuard;

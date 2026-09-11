@@ -1,12 +1,13 @@
 import { Controller, Get, Param, Post, Req, UseGuards } from '@nestjs/common';
 import { Request } from 'express';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { ProfessorOnlyGuard } from '../auth/guards/kind.guard';
 import { BimoJwtPayload } from '../auth/bimo-jwt-payload';
 import { TenantContext } from '../tenant/tenant-context';
 import { NotificationsService } from './notifications.service';
 
 @Controller('notifications')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, ProfessorOnlyGuard)
 export class NotificationsController {
   constructor(private readonly notificationsService: NotificationsService) {}
 

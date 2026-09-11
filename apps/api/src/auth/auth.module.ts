@@ -5,8 +5,10 @@ import { PassportModule } from '@nestjs/passport';
 import { TenantModule } from '../tenant/tenant.module';
 import { ProfessorModule } from '../professor/professor.module';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { AlunoModule } from '../aluno/aluno.module';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
+import { AlunoAuthService } from './aluno-auth.service';
 import { GoogleStrategy } from './strategies/google.strategy';
 import { MicrosoftStrategy } from './strategies/microsoft.strategy';
 import { JwtStrategy } from './strategies/jwt.strategy';
@@ -21,6 +23,7 @@ import { TokenRefreshService } from './token-refresh/token-refresh.service';
     TenantModule,
     ProfessorModule,
     NotificationsModule,
+    AlunoModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -33,6 +36,7 @@ import { TokenRefreshService } from './token-refresh/token-refresh.service';
   controllers: [AuthController],
   providers: [
     AuthService,
+    AlunoAuthService,
     GoogleStrategy,
     MicrosoftStrategy,
     JwtStrategy,

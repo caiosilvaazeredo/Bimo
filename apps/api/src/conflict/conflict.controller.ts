@@ -9,12 +9,13 @@ import {
 } from '@nestjs/common';
 import { Request } from 'express';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { ProfessorOnlyGuard } from '../auth/guards/kind.guard';
 import { BimoJwtPayload } from '../auth/bimo-jwt-payload';
 import { TenantContext } from '../tenant/tenant-context';
 import { ConflictService } from './conflict.service';
 
 @Controller('conflicts')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, ProfessorOnlyGuard)
 export class ConflictController {
   constructor(private readonly conflictService: ConflictService) {}
 

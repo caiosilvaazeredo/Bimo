@@ -57,6 +57,7 @@ export class AuthService {
         sub: professor.id,
         tenantId: tenant.id,
         role: professor.role,
+        kind: 'PROFESSOR',
       };
 
       return {
