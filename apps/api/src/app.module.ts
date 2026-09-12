@@ -59,8 +59,12 @@ const JWT_SCOPED_ROUTES = [
   'me/(.*)',
 ];
 
-/** Não resolve tenant nenhum: cria um tenant novo (RF-ADMIN-01). */
-const NO_TENANT_ROUTES = ['admin/tenants'];
+/**
+ * Não resolve tenant pelo header: cria um tenant novo (RF-ADMIN-01) ou
+ * resolve o tenant sozinho por um slug na própria URL, sem sessão
+ * (RNF-PRIV-02 — texto de consentimento consultado antes do login).
+ */
+const NO_TENANT_ROUTES = ['admin/tenants', 'tenants/(.*)'];
 
 @Module({
   imports: [

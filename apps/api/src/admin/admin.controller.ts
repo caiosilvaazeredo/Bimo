@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Get,
@@ -20,6 +21,7 @@ import { TenantsService } from '../tenant/tenants.service';
 import { ProfessorsService } from '../professor/professors.service';
 import { TurmaEspelhadaService } from '../turma-espelhada/turma-espelhada.service';
 import { SyncEventLogService } from '../sync-event-log/sync-event-log.service';
+import { ConsentTextsService } from '../privacy/consent-texts.service';
 
 /**
  * Administração institucional (RF-ADMIN-02/03/05): visão de todas as
@@ -36,6 +38,7 @@ export class AdminController {
     private readonly professorsService: ProfessorsService,
     private readonly turmaEspelhadaService: TurmaEspelhadaService,
     private readonly syncEventLogService: SyncEventLogService,
+    private readonly consentTextsService: ConsentTextsService,
   ) {}
 
   @Get('turmas')
@@ -85,6 +88,29 @@ export class AdminController {
       resourceId: tenantId,
       result: 'SUCCESS',
       detail: `enabled=${body.enabled} por admin=${req.user.sub}`,
+    });
+  }
+
+  /** RNF-PRIV-02/RNF-SEC-04: qual base legal/texto de consentimento este tenant usa. */
+  @Patch('tenant/consentimento')
+  async setConsentRegion(
+    @Req() req: Request & { user: BimoJwtPayload },
+    @Body() body: { region: string },
+  ) {
+    const validRegions = this.consentTextsService.listRegions();
+    if (!validRegions.includes(body.region)) {
+      throw new BadRequestException(
+        `Região de consentimento inválida. Use uma de: ${validRegions.join(', ')}.`,
+      );
+    }
+    const { tenantId } = req.user;
+    await this.tenantsService.setConsentRegion(tenantId, body.region);
+    await this.syncEventLogService.record({
+      tenantId,
+      jobType: 'ADMIN_SET_CONSENT_REGION',
+      resourceId: tenantId,
+      result: 'SUCCESS',
+      detail: `region=${body.region} por admin=${req.user.sub}`,
     });
   }
 }

@@ -222,6 +222,42 @@ assignment já atribuído a alunos — não testado contra um tenant EDU real,
 tratado como falha de propagação igual a qualquer outro erro de API. 7
 testes novos (128 no total).
 
+**Atualização RNF-PRIV-01 (revisão de minimização, não é código)**: revisão
+do modelo de dados de `Professor`, `Aluno` e `ExternalAccount` — os únicos
+campos de identificação pessoal armazenados são e-mail institucional e nome
+de exibição (ambos vindos do provedor OAuth/diretório da instituição, não
+preenchidos livremente por um usuário), mais os tokens OAuth (cifrados,
+`TokenEncryptionService`, RNF-SEC-01) em `ExternalAccount`. Não há data de
+nascimento, documento, endereço ou qualquer outro dado de menor além do já
+mínimo necessário para login e reconciliação de roster — nenhum campo extra
+identificado para remover. Ponto de atenção não resolvido nesta revisão:
+`Nota.grade`/`SubmissionStatus` fica retido indefinidamente mesmo após
+`DataSubjectRequestsService.deleteOwnData` anonimizar o Aluno (RNF-PRIV-03) —
+a nota em si não referencia o nome do aluno diretamente (só `alunoId`, que
+passa a apontar para um registro anonimizado), então não é dado pessoal por
+si só depois da anonimização, mas vale confirmar com jurídico se isso
+satisfaz o requisito de minimização para dados de avaliação escolar.
+
+**Atualização RNF-PRIV-02**: texto de consentimento configurável por região
+implementado. `Tenant.consentRegion` (novo campo, default `BR-LGPD`) escolhe
+qual texto se aplica; `ConsentTextsService` mantém 3 textos hardcoded
+(`BR-LGPD`, `EU-GDPR`, `GENERIC`, com fallback para `GENERIC` numa região
+desconhecida). `GET /tenants/:slug/consent-text` é público (sem sessão,
+resolve o tenant pelo slug da URL — mesmo padrão de `/auth/*`) para exibir
+na tela de login antes do OAuth; `PATCH /admin/tenant/consentimento` (admin
+institucional/de rede) troca a região, validando contra
+`ConsentTextsService.listRegions()` e registrando em log de auditoria
+(RNF-SEC-04). **Simplificação assumida**: os textos são hardcoded no
+código, não um editor de texto livre por instituição — cobre "escolher qual
+base legal/texto se aplica", não personalização arbitrária. O texto ainda
+não é registrado como "consentimento dado" em lugar nenhum (o campo
+`version` existe para isso, mas nada grava "titular X consentiu com a
+versão Y" ainda) — fica como próximo passo se o produto precisar provar
+consentimento formal. A tela de login (`apps/web/src/app/login/page.tsx`)
+já busca e exibe o texto (debounce de 400ms enquanto o professor digita o
+identificador da instituição) abaixo do campo, antes de escolher Google ou
+Microsoft. 7 testes novos (135 no total).
+
 **Atualização RNF-UX-01**: primeira rodada de correções de acessibilidade nas
 4 páginas do painel (`/`, `/login`, `/turmas`, `/auth/callback`). Trocados os
 botões "Entrar com Google/Microsoft" de `<a>` com `pointerEvents:none` (não

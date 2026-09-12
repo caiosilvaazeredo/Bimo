@@ -45,4 +45,9 @@ export class TenantsService {
   async setContingencyEnabled(id: string, enabled: boolean): Promise<void> {
     await this.tenantRepository.update({ id }, { contingencyEnabled: enabled });
   }
+
+  /** RNF-PRIV-02: troca o texto de consentimento exibido aos usuários deste tenant. */
+  async setConsentRegion(id: string, region: string): Promise<void> {
+    await this.tenantRepository.update({ id }, { consentRegion: region });
+  }
 }

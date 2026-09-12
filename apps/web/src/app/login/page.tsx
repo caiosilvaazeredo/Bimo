@@ -1,12 +1,35 @@
 "use client";
 
-import { useState } from "react";
-import { getApiBaseUrl } from "@/lib/api";
+import { useEffect, useState } from "react";
+import { ConsentText, getApiBaseUrl, getConsentText } from "@/lib/api";
 
 export default function LoginPage() {
   const [tenantSlug, setTenantSlug] = useState("");
+  const [consentText, setConsentText] = useState<ConsentText | null>(null);
 
   const canSubmit = tenantSlug.trim().length > 0;
+
+  useEffect(() => {
+    const slug = tenantSlug.trim();
+    if (!slug) {
+      setConsentText(null);
+      return;
+    }
+    let cancelled = false;
+    const timer = setTimeout(() => {
+      getConsentText(slug)
+        .then((text) => {
+          if (!cancelled) setConsentText(text);
+        })
+        .catch(() => {
+          if (!cancelled) setConsentText(null);
+        });
+    }, 400);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [tenantSlug]);
 
   function goToOAuth(provider: "google" | "microsoft") {
     if (!canSubmit) return;
@@ -35,6 +58,10 @@ export default function LoginPage() {
             style={{ display: "block", width: "100%", marginTop: "0.25rem", padding: "0.5rem" }}
           />
         </div>
+
+        {consentText && (
+          <p style={{ fontSize: "0.85rem", color: "#555" }}>{consentText.text}</p>
+        )}
 
         <button
           type="button"

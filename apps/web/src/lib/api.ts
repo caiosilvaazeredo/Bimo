@@ -54,3 +54,20 @@ export function createTurmaEspelhada(input: { name: string; academicPeriod?: str
     body: JSON.stringify(input),
   });
 }
+
+export interface ConsentText {
+  region: string;
+  version: string;
+  text: string;
+}
+
+/** RNF-PRIV-02: sem sessão — o tenant é resolvido pelo slug na própria URL. */
+export async function getConsentText(tenantSlug: string): Promise<ConsentText> {
+  const response = await fetch(
+    `${getApiBaseUrl()}/tenants/${encodeURIComponent(tenantSlug)}/consent-text`,
+  );
+  if (!response.ok) {
+    throw new ApiError(response.status, "Não foi possível carregar o texto de consentimento.");
+  }
+  return response.json() as Promise<ConsentText>;
+}

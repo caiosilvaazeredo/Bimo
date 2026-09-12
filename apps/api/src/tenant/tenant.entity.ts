@@ -23,6 +23,10 @@ export class Tenant {
   @Column({ name: 'contingency_enabled', default: true })
   contingencyEnabled: boolean;
 
+  /** RNF-PRIV-02: qual texto de consentimento (LGPD/GDPR/genérico) mostrar aos usuários deste tenant. */
+  @Column({ name: 'consent_region', default: 'BR-LGPD' })
+  consentRegion: string;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 }
