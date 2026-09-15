@@ -73,11 +73,28 @@ const NO_TENANT_ROUTES = ['admin/tenants', 'tenants/(.*)'];
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
         type: 'oracle',
-        host: config.get<string>('DB_HOST'),
-        port: config.get<number>('DB_PORT', 1521),
+        // Autonomous Database (mTLS obrigatório) conecta pelo alias definido
+        // no tnsnames.ora da Wallet (ex: "bimodb_medium"), não por
+        // host/port/serviceName soltos — por isso DB_CONNECT_STRING tem
+        // prioridade quando presente. DB_WALLET_LOCATION deve apontar para a
+        // mesma pasta onde a Wallet foi extraída (normalmente igual a
+        // TNS_ADMIN, que também precisa estar setado na env do processo
+        // para o driver oracledb encontrar o tnsnames.ora).
+        ...(config.get<string>('DB_CONNECT_STRING')
+          ? { connectString: config.get<string>('DB_CONNECT_STRING') }
+          : {
+              host: config.get<string>('DB_HOST'),
+              port: config.get<number>('DB_PORT', 1521),
+              serviceName: config.get<string>('DB_SERVICE_NAME'),
+            }),
         username: config.get<string>('DB_USERNAME'),
         password: config.get<string>('DB_PASSWORD'),
-        serviceName: config.get<string>('DB_SERVICE_NAME'),
+        extra: config.get<string>('DB_WALLET_LOCATION')
+          ? {
+              walletLocation: config.get<string>('DB_WALLET_LOCATION'),
+              walletPassword: config.get<string>('DB_WALLET_PASSWORD'),
+            }
+          : undefined,
         entities: [
           Tenant,
           Professor,

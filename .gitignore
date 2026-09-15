@@ -12,6 +12,13 @@ out/
 .env.local
 .env.*.local
 
+# Oracle Autonomous Database wallet (RNF-SEC-01: nunca commitar credenciais de TLS)
+wallet/
+Wallet_*.zip
+*.p12
+cwallet.sso
+ewallet.pem
+
 # Logs
 *.log
 npm-debug.log*
