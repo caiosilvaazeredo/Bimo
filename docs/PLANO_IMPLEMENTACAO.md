@@ -133,7 +133,7 @@ O DoD global da v1 é o da seção 9 do documento de requisitos.
 ## 7. Status de implementação (código em `apps/api` e `apps/web`)
 
 As Fases 0-9 têm uma primeira implementação no branch `claude/pensive-dijkstra-3s3dva`,
-com build, lint e 139 testes unitários passando a cada commit. Resumo do que está
+com build, lint e 278 testes unitários passando a cada commit. Resumo do que está
 implementado de fato versus o que ficou simplificado ou pendente:
 
 **Completo**: Fase 0 (monorepo, CI, multi-tenancy), Fase 1 (RF-AUTH-01 a 04, RBAC/JWT —
@@ -278,6 +278,49 @@ falhas de OAuth/login — RF-STU-04 no requisito original é mais amplo
 mas nada equivalente existe do lado do aluno porque o aluno não faz OAuth
 com o Bimo) ficam como possível extensão futura. 4 testes novos (139 no
 total).
+
+**Atualização RNF-MAINT-01**: cobertura de teste da API elevada de 57,27%
+para 80,21% de statements (46,58% → 78,63% branches; 42,82% → 86,92%
+funções; 57,64% → 81,11% linhas — medido com `npx jest --coverage` a partir
+de `apps/api`), com 139 testes novos (139 → 278 no total). O trabalho foi
+quase todo aditivo — nenhum teste existente foi alterado além de pequenos
+ajustes nos mocks de repositório para suportar os novos casos. Focado em
+três frentes: (1) os oito controllers que estavam em 0% de cobertura
+(`TarefaController`, `NotaController`, `TurmaEspelhadaController`,
+`ConflictController`, `NotificationsController`, `PortalController`,
+`BillingController`, `MigrationController`, e depois também
+`MatriculaController`, `ProfessorContingenciaController` e
+`TenantBootstrapController`), instanciados diretamente com dependências
+mockadas, cobrindo o wrap em `TenantContext.run` e o mapeamento de DTO para
+input de serviço; (2) services/handlers sem spec algum (`TenantsService`,
+`TenantMiddleware`, `SyncEventLogService`, `AlunosService`,
+`GoogleTokenRefresher`/`MicrosoftTokenRefresher`,
+`DataSubjectRequestsController`, os handlers `CreateMissingMicrosoftTeamHandler`/
+`CreateMissingGoogleCourseHandler`), incluindo os ramos de erro
+(`NotFoundException`, conta externa não vinculada, falha na chamada
+externa); (3) os dois clients de integração (`GoogleClassroomClient`,
+`MicrosoftTeamsClient`), que só tinham um contract test cobrindo
+`createCourse`/`createTeam` — adicionados testes unitários para os
+métodos restantes (`getCourse`, `listStudents`, `createCourseWork`,
+`updateCourseWork`, `deleteCourseWork`, `listCourseWork`, `getCourseWork`,
+`listSubmissions`, `setGrade` no Google; `getGroup`, `listMembers`,
+`createAssignment`, `updateAssignment`, `deleteAssignment`,
+`listAssignments`, `getAssignment`, `listAssignmentSubmissions`, `setGrade`
+no Microsoft), incluindo os ramos de rate limit (429/503) e erro HTTP
+genérico. Por fim, completados os ramos que faltavam em vários services já
+parcialmente cobertos (`ProfessorsService`, `ExternalAccountsService`,
+`TurmaEspelhadaService`, `TarefaService`, `NotaService`,
+`NotificationsService`, `AdminController`, `MatriculaService`,
+`ConflictService`). **Abaixo dos 80% ou fora do escopo, honestamente**:
+`workers.module.ts` foi deliberadamente pulado (loop de poll gated por env
+var, baixo valor para teste unitário) e os `*.module.ts` de wiring do Nest
+continuam em 0% (esperado, não testado por convenção). Alguns arquivos
+ficaram um pouco abaixo de 80% em branches — `admin.controller.ts` (poucas
+combinações de guard testadas), `delete-coursework.handler.ts`,
+`sync-queue.service.ts`/`sync-worker.service.ts` (alguns ramos defensivos
+de erro concorrente) e `matricula.service.ts`/`nota.service.ts` (ramos de
+`?? null` em campos totalmente opcionais) — considerados de baixo risco e
+não perseguidos para não inflar a suíte com testes de pouco valor.
 
 **Atualização RNF-UX-01**: primeira rodada de correções de acessibilidade nas
 4 páginas do painel (`/`, `/login`, `/turmas`, `/auth/callback`). Trocados os
