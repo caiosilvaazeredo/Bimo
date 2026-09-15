@@ -17,7 +17,20 @@ function buildRepositoryMock() {
       store.set(entity.id, entity);
       return entity;
     }),
-    findOne: jest.fn(async ({ where }: any) => store.get(where.id) ?? null),
+    findOne: jest.fn(async ({ where }: any) => {
+      if (where.id !== undefined) return store.get(where.id) ?? null;
+      for (const item of store.values()) {
+        if (
+          (where.googleCourseWorkId === undefined ||
+            item.googleCourseWorkId === where.googleCourseWorkId) &&
+          (where.microsoftAssignmentId === undefined ||
+            item.microsoftAssignmentId === where.microsoftAssignmentId)
+        ) {
+          return item;
+        }
+      }
+      return null;
+    }),
     find: jest.fn(async ({ where }: any) =>
       [...store.values()].filter(
         (t) => t.turmaEspelhadaId === where.turmaEspelhadaId,
@@ -186,5 +199,94 @@ describe('TarefaService', () => {
         SyncStatus.DELETED,
       );
     });
+  });
+
+  it('findById lança NotFoundException quando não encontra a tarefa', async () => {
+    await expect(
+      withTenant(() => service.findById('inexistente')),
+    ).rejects.toThrow('Tarefa não encontrada');
+  });
+
+  it('markConflict marca status CONFLICT (RF-SYNC-03)', async () => {
+    turmaEspelhadaService.findById.mockResolvedValue({
+      id: 'turma-1',
+      syncStatus: SyncStatus.SYNCED,
+    });
+    const tarefa = await withTenant(() =>
+      service.publish('turma-1', 'prof-1', { title: 'Tarefa 1' }),
+    );
+
+    await withTenant(() => service.markConflict(tarefa.id));
+
+    expect(repository._store.get(tarefa.id).syncStatus).toBe(
+      SyncStatus.CONFLICT,
+    );
+  });
+
+  describe('importFromExternal (RF-MIG-02)', () => {
+    it('cria uma tarefa nova quando não há id externo já importado', async () => {
+      const tarefa = await withTenant(() =>
+        service.importFromExternal({
+          turmaEspelhadaId: 'turma-1',
+          title: 'Tarefa importada',
+          googleCourseWorkId: 'cw-1',
+        }),
+      );
+
+      expect(tarefa.title).toBe('Tarefa importada');
+      expect(tarefa.googleCourseWorkId).toBe('cw-1');
+    });
+
+    it('é idempotente pelo id do Google (RF-MIG-05)', async () => {
+      const first = await withTenant(() =>
+        service.importFromExternal({
+          turmaEspelhadaId: 'turma-1',
+          title: 'Tarefa importada',
+          googleCourseWorkId: 'cw-1',
+        }),
+      );
+      const second = await withTenant(() =>
+        service.importFromExternal({
+          turmaEspelhadaId: 'turma-1',
+          title: 'Tarefa importada',
+          googleCourseWorkId: 'cw-1',
+        }),
+      );
+
+      expect(second.id).toBe(first.id);
+    });
+
+    it('é idempotente pelo id do Microsoft quando não há id do Google', async () => {
+      const first = await withTenant(() =>
+        service.importFromExternal({
+          turmaEspelhadaId: 'turma-1',
+          title: 'Tarefa importada',
+          microsoftAssignmentId: 'a-1',
+        }),
+      );
+      const second = await withTenant(() =>
+        service.importFromExternal({
+          turmaEspelhadaId: 'turma-1',
+          title: 'Tarefa importada',
+          microsoftAssignmentId: 'a-1',
+        }),
+      );
+
+      expect(second.id).toBe(first.id);
+    });
+  });
+
+  it('findByGoogleCourseWorkId retorna null quando não encontra', async () => {
+    const result = await withTenant(() =>
+      service.findByGoogleCourseWorkId('inexistente'),
+    );
+    expect(result).toBeNull();
+  });
+
+  it('findByMicrosoftAssignmentId retorna null quando não encontra', async () => {
+    const result = await withTenant(() =>
+      service.findByMicrosoftAssignmentId('inexistente'),
+    );
+    expect(result).toBeNull();
   });
 });

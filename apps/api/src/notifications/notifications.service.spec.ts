@@ -67,4 +67,33 @@ describe('NotificationsService', () => {
 
     expect(repository._store.get(notif.id).read).toBe(true);
   });
+
+  it('cria notificação de falha recorrente para o admin (RF-NOTIF-03)', async () => {
+    await withTenant(() =>
+      service.notifyAdminRecurringFailure('admin-1', 'falha ao sincronizar'),
+    );
+
+    const list = await withTenant(() => service.listForRecipient('admin-1'));
+    expect(list[0].kind).toBe(NotificationKind.ADMIN_RECURRING_FAILURE);
+    expect(list[0].message).toBe('falha ao sincronizar');
+  });
+
+  it('cria notificação de resumo periódico (RF-DASH-06)', async () => {
+    await withTenant(() =>
+      service.notifyPeriodicSummary('prof-1', 'resumo da semana'),
+    );
+
+    const list = await withTenant(() => service.listForRecipient('prof-1'));
+    expect(list[0].kind).toBe(NotificationKind.PERIODIC_SUMMARY);
+  });
+
+  it('cria notificação de sinal de acesso de contingência (RF-STU-04/05)', async () => {
+    await withTenant(() =>
+      service.notifyContingencySignal('prof-1', 'turma-1', 'aluno-1', 3),
+    );
+
+    const list = await withTenant(() => service.listForRecipient('prof-1'));
+    expect(list[0].kind).toBe(NotificationKind.CONTINGENCY_SIGNAL);
+    expect(list[0].message).toContain('3 vezes');
+  });
 });
