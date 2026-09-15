@@ -14,7 +14,20 @@ function buildRepositoryMock() {
       store.set(entity.id, entity);
       return entity;
     }),
-    findOne: jest.fn(async ({ where }: any) => store.get(where.id) ?? null),
+    findOne: jest.fn(async ({ where }: any) => {
+      if (where.id !== undefined) return store.get(where.id) ?? null;
+      for (const item of store.values()) {
+        if (
+          (where.googleCourseId === undefined ||
+            item.googleCourseId === where.googleCourseId) &&
+          (where.microsoftTeamId === undefined ||
+            item.microsoftTeamId === where.microsoftTeamId)
+        ) {
+          return item;
+        }
+      }
+      return null;
+    }),
     find: jest.fn(async () => [...store.values()]),
     update: jest.fn(async ({ id }: any, patch: any) => {
       const entity = store.get(id);
@@ -148,5 +161,112 @@ describe('TurmaEspelhadaService', () => {
     const updated = repository._store.get(turma.id);
     expect(updated.syncStatus).toBe(SyncStatus.ERROR);
     expect(updated.lastError).toBe('rate limit');
+  });
+
+  it('findById lança NotFoundException quando não encontra a turma', async () => {
+    await expect(
+      withTenant(() => service.findById('inexistente')),
+    ).rejects.toThrow('Turma espelhada não encontrada');
+  });
+
+  it('listByTenant retorna as turmas do tenant', async () => {
+    externalAccountsService.hasProvider.mockResolvedValue(true);
+    await withTenant(() =>
+      service.create({ professorId: 'prof-1', name: 'Turma A' }),
+    );
+
+    const list = await withTenant(() => service.listByTenant());
+
+    expect(list).toHaveLength(1);
+  });
+
+  describe('createLinked (RF-MIG-01)', () => {
+    it('marca SYNCED quando os dois lados já existem', async () => {
+      const turma = await withTenant(() =>
+        service.createLinked({
+          professorId: 'prof-1',
+          name: 'Turma A',
+          googleCourseId: 'course-1',
+          microsoftTeamId: 'team-1',
+        }),
+      );
+
+      expect(turma.syncStatus).toBe(SyncStatus.SYNCED);
+    });
+
+    it('marca SYNCING quando falta um dos lados', async () => {
+      const turma = await withTenant(() =>
+        service.createLinked({
+          professorId: 'prof-1',
+          name: 'Turma A',
+          googleCourseId: 'course-1',
+          microsoftTeamId: null,
+        }),
+      );
+
+      expect(turma.syncStatus).toBe(SyncStatus.SYNCING);
+    });
+  });
+
+  describe('findByGoogleCourseId / findByMicrosoftTeamId (RF-MIG-01)', () => {
+    it('encontra a turma pelo id do curso no Google', async () => {
+      await withTenant(() =>
+        service.createLinked({
+          professorId: 'prof-1',
+          name: 'Turma A',
+          googleCourseId: 'course-1',
+          microsoftTeamId: null,
+        }),
+      );
+
+      const found = await withTenant(() =>
+        service.findByGoogleCourseId('course-1'),
+      );
+
+      expect(found?.googleCourseId).toBe('course-1');
+    });
+
+    it('retorna null quando não encontra pelo id do curso no Google', async () => {
+      const found = await withTenant(() =>
+        service.findByGoogleCourseId('inexistente'),
+      );
+
+      expect(found).toBeNull();
+    });
+
+    it('encontra a turma pelo id do Team no Microsoft', async () => {
+      await withTenant(() =>
+        service.createLinked({
+          professorId: 'prof-1',
+          name: 'Turma A',
+          googleCourseId: null,
+          microsoftTeamId: 'team-1',
+        }),
+      );
+
+      const found = await withTenant(() =>
+        service.findByMicrosoftTeamId('team-1'),
+      );
+
+      expect(found?.microsoftTeamId).toBe('team-1');
+    });
+  });
+
+  it('markSideSynced marca SYNCED assim que o segundo lado é preenchido (RF-MIG-01)', async () => {
+    const turma = await withTenant(() =>
+      service.createLinked({
+        professorId: 'prof-1',
+        name: 'Turma A',
+        googleCourseId: 'course-1',
+        microsoftTeamId: null,
+      }),
+    );
+
+    const result = await withTenant(() =>
+      service.markSideSynced(turma.id, 'MICROSOFT', 'team-1'),
+    );
+
+    expect(result.syncStatus).toBe(SyncStatus.SYNCED);
+    expect(result.microsoftTeamId).toBe('team-1');
   });
 });
