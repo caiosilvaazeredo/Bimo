@@ -85,4 +85,55 @@ describe('MatriculaService', () => {
       await withTenant(() => service.listAlunoIdsByTurma('turma-1')),
     ).toEqual(['aluno-1', 'aluno-2']);
   });
+
+  it('preenche os ids externos ao matricular pela primeira vez', async () => {
+    const matricula = await withTenant(() =>
+      service.enroll('aluno-1', 'turma-1', {
+        googleUserId: 'g-1',
+        microsoftUserId: null,
+      }),
+    );
+
+    expect(matricula.googleUserId).toBe('g-1');
+    expect(matricula.microsoftUserId).toBeNull();
+  });
+
+  it('atualiza os ids externos quando já matriculado e um novo id chega (RF-INT-03)', async () => {
+    await withTenant(() => service.enroll('aluno-1', 'turma-1'));
+
+    const updated = await withTenant(() =>
+      service.enroll('aluno-1', 'turma-1', { microsoftUserId: 'm-1' }),
+    );
+
+    expect(updated.microsoftUserId).toBe('m-1');
+  });
+
+  it('não regrava quando já matriculado e nenhum id externo é informado', async () => {
+    const first = await withTenant(() => service.enroll('aluno-1', 'turma-1'));
+
+    const second = await withTenant(() => service.enroll('aluno-1', 'turma-1'));
+
+    expect(second).toBe(first);
+  });
+
+  it('findByAlunoAndTurma retorna a matrícula ou null', async () => {
+    expect(
+      await withTenant(() => service.findByAlunoAndTurma('aluno-1', 'turma-1')),
+    ).toBeNull();
+
+    await withTenant(() => service.enroll('aluno-1', 'turma-1'));
+
+    expect(
+      await withTenant(() => service.findByAlunoAndTurma('aluno-1', 'turma-1')),
+    ).not.toBeNull();
+  });
+
+  it('listByTurma lista as matrículas da turma', async () => {
+    await withTenant(() => service.enroll('aluno-1', 'turma-1'));
+    await withTenant(() => service.enroll('aluno-2', 'turma-1'));
+
+    const list = await withTenant(() => service.listByTurma('turma-1'));
+
+    expect(list).toHaveLength(2);
+  });
 });

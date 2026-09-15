@@ -97,4 +97,33 @@ describe('NotaService', () => {
     expect(repository._store.get(nota.id).syncStatus).toBe(SyncStatus.ERROR);
     expect(repository._store.get(nota.id).lastError).toBe('falha');
   });
+
+  it('findById retorna a nota e lança NotFoundException quando não encontra', async () => {
+    const nota = await withTenant(() =>
+      service.setGrade('tarefa-1', 'aluno-1', 'prof-1', { grade: 8 }),
+    );
+
+    const found = await withTenant(() => service.findById(nota.id));
+    expect(found.id).toBe(nota.id);
+
+    await expect(
+      withTenant(() => service.findById('inexistente')),
+    ).rejects.toThrow('Nota não encontrada');
+  });
+
+  it('findByTarefaAndAluno retorna a nota do aluno na tarefa (RF-STU-02)', async () => {
+    await withTenant(() =>
+      service.setGrade('tarefa-1', 'aluno-1', 'prof-1', { grade: 8 }),
+    );
+
+    const found = await withTenant(() =>
+      service.findByTarefaAndAluno('tarefa-1', 'aluno-1'),
+    );
+    const notFound = await withTenant(() =>
+      service.findByTarefaAndAluno('tarefa-1', 'aluno-2'),
+    );
+
+    expect(found?.grade).toBe(8);
+    expect(notFound).toBeNull();
+  });
 });

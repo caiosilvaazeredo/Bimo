@@ -118,4 +118,42 @@ describe('ConflictService', () => {
       withTenant(() => service.resolve('inexistente', 'GOOGLE')),
     ).rejects.toBeInstanceOf(NotFoundException);
   });
+
+  it('listOpenByResource lista conflitos abertos de um recurso específico', async () => {
+    await withTenant(() =>
+      service.raise({
+        resourceType: 'TAREFA',
+        resourceId: 'tarefa-1',
+        fieldName: 'title',
+        googleValue: 'A',
+        googleUpdatedAt: null,
+        microsoftValue: 'B',
+        microsoftUpdatedAt: null,
+      }),
+    );
+
+    const list = await withTenant(() =>
+      service.listOpenByResource('TAREFA', 'tarefa-1'),
+    );
+
+    expect(list).toHaveLength(1);
+  });
+
+  it('listOpenByTenant lista todos os conflitos abertos do tenant', async () => {
+    await withTenant(() =>
+      service.raise({
+        resourceType: 'TAREFA',
+        resourceId: 'tarefa-1',
+        fieldName: 'title',
+        googleValue: 'A',
+        googleUpdatedAt: null,
+        microsoftValue: 'B',
+        microsoftUpdatedAt: null,
+      }),
+    );
+
+    const list = await withTenant(() => service.listOpenByTenant());
+
+    expect(list).toHaveLength(1);
+  });
 });
