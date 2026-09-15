@@ -1,4 +1,4 @@
-import { ForbiddenException } from '@nestjs/common';
+import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { TenantContext } from '../tenant/tenant-context';
 import { ProfessorsService } from './professors.service';
 import { ProfessorRole } from './professor-role.enum';
@@ -114,5 +114,56 @@ describe('ProfessorsService', () => {
     );
     expect(foundOnLogin.id).toBe(admin.id);
     expect(foundOnLogin.role).toBe(ProfessorRole.INSTITUTIONAL_ADMIN);
+  });
+
+  it('findById retorna o professor encontrado', async () => {
+    const created = await withTenant(() =>
+      service.findOrCreateByInstitutionalEmail({
+        institutionalEmail: 'p@escola.edu.br',
+        displayName: 'Prof',
+      }),
+    );
+
+    const found = await withTenant(() => service.findById(created.id));
+
+    expect(found.id).toBe(created.id);
+  });
+
+  it('findById lança NotFoundException quando não encontra o professor', async () => {
+    await expect(
+      withTenant(() => service.findById('inexistente')),
+    ).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('listByTenant lista apenas professores do tenant corrente', async () => {
+    await withTenant(() =>
+      service.findOrCreateByInstitutionalEmail({
+        institutionalEmail: 'a@escola.edu.br',
+        displayName: 'A',
+      }),
+    );
+
+    const list = await withTenant(() => service.listByTenant());
+
+    expect(list).toHaveLength(1);
+    expect(list[0].institutionalEmail).toBe('a@escola.edu.br');
+  });
+
+  it('anonymize apaga e-mail/nome e desativa o professor (RNF-PRIV-03)', async () => {
+    const created = await withTenant(() =>
+      service.findOrCreateByInstitutionalEmail({
+        institutionalEmail: 'p@escola.edu.br',
+        displayName: 'Prof',
+      }),
+    );
+
+    await withTenant(() => service.anonymize(created.id));
+
+    const updated = repository._store.get(created.id);
+    expect(updated.institutionalEmail).toBe(
+      `titular-removido-${created.id}@anonimizado.bimo`,
+    );
+    expect(updated.displayName).toBe('Titular removido a pedido (LGPD)');
+    expect(updated.active).toBe(false);
   });
 });
