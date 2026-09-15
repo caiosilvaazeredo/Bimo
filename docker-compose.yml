@@ -1,0 +1,41 @@
+# Deploy de produção simples (uma VM só) do Bimo.
+#
+# Uso:
+#   1. Copie apps/api/.env.example para .env na raiz e preencha (ver
+#      docs/DEPLOY.md para o passo a passo completo).
+#   2. Extraia a Wallet do Autonomous Database em ./wallet (fora do git —
+#      já está no .gitignore).
+#   3. docker compose up -d --build
+#
+# Não inclui TLS/domínio — ver docs/DEPLOY.md para colocar um reverse proxy
+# (Caddy/Nginx) na frente com certificado Let's Encrypt.
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    environment:
+      TNS_ADMIN: /wallet
+      DB_WALLET_LOCATION: /wallet
+      WORKERS_ENABLED: "true"
+      PERIODIC_SUMMARY_ENABLED: "true"
+    volumes:
+      - ./wallet:/wallet:ro
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3000}
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    depends_on:
+      - api
