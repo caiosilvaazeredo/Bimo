@@ -72,6 +72,23 @@ export class NotificationsService {
     await this.create(professorId, NotificationKind.PERIODIC_SUMMARY, message);
   }
 
+  /** RF-STU-04/05: aluno usou a contingência repetidas vezes na mesma turma — sinal de problema de acesso persistente, não um imprevisto pontual. */
+  async notifyContingencySignal(
+    professorId: string,
+    turmaEspelhadaId: string,
+    alunoId: string,
+    count: number,
+  ): Promise<void> {
+    this.logger.warn(
+      `[e-mail] Sinal de acesso (RF-STU-04): aluno=${alunoId} usou a contingência ${count} vezes na turma ${turmaEspelhadaId}.`,
+    );
+    await this.create(
+      professorId,
+      NotificationKind.CONTINGENCY_SIGNAL,
+      `Um aluno já usou o acesso de contingência ${count} vezes nesta turma — pode ser um problema de acesso persistente, vale checar.`,
+    );
+  }
+
   async listForRecipient(recipientId: string): Promise<Notification[]> {
     const tenantId = TenantContext.getTenantId();
     return this.repository.find({

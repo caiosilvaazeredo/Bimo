@@ -31,14 +31,25 @@ describe('EntregaContingenciaService', () => {
   let tenantsService: any;
   let service: EntregaContingenciaService;
 
+  let turmaEspelhadaService: any;
+  let notificationsService: any;
+
   beforeEach(() => {
     repository = buildRepositoryMock();
     matriculaService = { isEnrolled: jest.fn() };
     tenantsService = { findById: jest.fn() };
+    turmaEspelhadaService = {
+      findById: jest.fn().mockResolvedValue({ professorId: 'prof-1' }),
+    };
+    notificationsService = {
+      notifyContingencySignal: jest.fn().mockResolvedValue(undefined),
+    };
     service = new EntregaContingenciaService(
       repository as any,
       matriculaService,
       tenantsService,
+      turmaEspelhadaService,
+      notificationsService,
     );
   });
 
@@ -59,6 +70,7 @@ describe('EntregaContingenciaService', () => {
 
     expect(entrega.link).toBe('https://drive.example/x');
     expect(entrega.propagatedAt).toBeNull();
+    expect(notificationsService.notifyContingencySignal).not.toHaveBeenCalled();
   });
 
   it('rejeita quando a instituição desabilitou a contingência (RF-STU-06)', async () => {
@@ -88,5 +100,112 @@ describe('EntregaContingenciaService', () => {
         }),
       ),
     ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  describe('sinal de problema de acesso (RF-STU-04)', () => {
+    beforeEach(() => {
+      tenantsService.findById.mockResolvedValue({ contingencyEnabled: true });
+      matriculaService.isEnrolled.mockResolvedValue(true);
+    });
+
+    it('avisa o professor quando o aluno cruza o limite de usos na mesma turma', async () => {
+      await withTenant(() =>
+        service.submit({
+          alunoId: 'aluno-1',
+          turmaEspelhadaId: 'turma-1',
+          link: 'x1',
+        }),
+      );
+      expect(
+        notificationsService.notifyContingencySignal,
+      ).not.toHaveBeenCalled();
+
+      await withTenant(() =>
+        service.submit({
+          alunoId: 'aluno-1',
+          turmaEspelhadaId: 'turma-1',
+          link: 'x2',
+        }),
+      );
+
+      expect(notificationsService.notifyContingencySignal).toHaveBeenCalledWith(
+        'prof-1',
+        'turma-1',
+        'aluno-1',
+        2,
+      );
+    });
+
+    it('não avisa de novo em usos além do limite (evita spam)', async () => {
+      await withTenant(() =>
+        service.submit({
+          alunoId: 'aluno-1',
+          turmaEspelhadaId: 'turma-1',
+          link: 'x1',
+        }),
+      );
+      await withTenant(() =>
+        service.submit({
+          alunoId: 'aluno-1',
+          turmaEspelhadaId: 'turma-1',
+          link: 'x2',
+        }),
+      );
+      await withTenant(() =>
+        service.submit({
+          alunoId: 'aluno-1',
+          turmaEspelhadaId: 'turma-1',
+          link: 'x3',
+        }),
+      );
+
+      expect(
+        notificationsService.notifyContingencySignal,
+      ).toHaveBeenCalledTimes(1);
+    });
+
+    it('não deixa a entrega falhar se a notificação der erro', async () => {
+      notificationsService.notifyContingencySignal.mockRejectedValue(
+        new Error('falha ao notificar'),
+      );
+      await withTenant(() =>
+        service.submit({
+          alunoId: 'aluno-1',
+          turmaEspelhadaId: 'turma-1',
+          link: 'x1',
+        }),
+      );
+
+      const entrega = await withTenant(() =>
+        service.submit({
+          alunoId: 'aluno-1',
+          turmaEspelhadaId: 'turma-1',
+          link: 'x2',
+        }),
+      );
+
+      expect(entrega.link).toBe('x2');
+    });
+
+    it('contabiliza turmas separadamente: usar contingência em turmas diferentes não soma para o limite', async () => {
+      await withTenant(() =>
+        service.submit({
+          alunoId: 'aluno-1',
+          turmaEspelhadaId: 'turma-1',
+          link: 'x1',
+        }),
+      );
+      await withTenant(() =>
+        service.submit({
+          alunoId: 'aluno-1',
+          turmaEspelhadaId: 'turma-2',
+          link: 'x2',
+        }),
+      );
+
+      expect(
+        notificationsService.notifyContingencySignal,
+      ).not.toHaveBeenCalled();
+    });
   });
 });

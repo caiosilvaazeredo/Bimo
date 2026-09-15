@@ -133,7 +133,7 @@ O DoD global da v1 é o da seção 9 do documento de requisitos.
 ## 7. Status de implementação (código em `apps/api` e `apps/web`)
 
 As Fases 0-9 têm uma primeira implementação no branch `claude/pensive-dijkstra-3s3dva`,
-com build, lint e 128 testes unitários passando a cada commit. Resumo do que está
+com build, lint e 139 testes unitários passando a cada commit. Resumo do que está
 implementado de fato versus o que ficou simplificado ou pendente:
 
 **Completo**: Fase 0 (monorepo, CI, multi-tenancy), Fase 1 (RF-AUTH-01 a 04, RBAC/JWT —
@@ -144,7 +144,7 @@ de tarefas — RF-SYNC-01/02 — e materiais por link — RF-INT-04), Fase 3 sli
 (login e painel de turmas no Next.js — falta revisão WCAG a fundo, links de chat
 nativo e resumo periódico), Fase 4 (log de auditoria, conflitos, notificações), Fase 5
 completa (portal do aluno e contingência, incluindo tarefas/notas em modo leitura —
-RF-STU-02 — RF-STU-04 detecção automática de sinais fica para depois), Fase 6
+RF-STU-02 — RF-STU-04 detecção automática de sinais implementada depois, ver seção de atualizações), Fase 6
 (migração de turmas existentes, com roster capturando o id do aluno em cada
 provedor), Fase 7 (administração institucional), Fase 8 (billing de aluno ativo e
 relatórios), Fase 9 (exclusão individual de dados via LGPD/RNF-PRIV-03).
@@ -257,6 +257,27 @@ consentimento formal. A tela de login (`apps/web/src/app/login/page.tsx`)
 já busca e exibe o texto (debounce de 400ms enquanto o professor digita o
 identificador da instituição) abaixo do campo, antes de escolher Google ou
 Microsoft. 7 testes novos (135 no total).
+
+**Atualização RF-STU-04**: detecção automática de sinal de problema de
+acesso implementada — até aqui a contingência era 100% reativa (o aluno
+aciona, o professor só descobre se conferir o painel de RF-STU-05).
+`EntregaContingenciaService.submit` agora conta, a cada envio, quantas
+entregas de contingência aquele aluno já fez naquela turma; ao cruzar
+`CONTINGENCY_SIGNAL_THRESHOLD` (2 — ou seja, a partir do 2º uso seguido),
+notifica o professor proativamente via `NotificationsService.
+notifyContingencySignal` (novo `NotificationKind.CONTINGENCY_SIGNAL`, mesmo
+padrão de log `[e-mail]` + registro em painel dos demais tipos). Notifica só
+uma vez ao cruzar o limite (não a cada entrega subsequente, para não
+gerar spam), e a notificação é best-effort — uma falha ao notificar nunca
+impede a entrega em si de ser registrada. **Simplificação assumida**: o
+sinal é "uso repetido de contingência" (um proxy direto e sem falsos
+positivos de terceiros), não uma heurística mais sofisticada envolvendo
+falhas de OAuth/login — RF-STU-04 no requisito original é mais amplo
+("detecção de sinais de problema de acesso" no plural), então outros sinais
+(ex: falha recorrente de refresh token do professor já é RF-AUTH-04/RF-NOTIF-02,
+mas nada equivalente existe do lado do aluno porque o aluno não faz OAuth
+com o Bimo) ficam como possível extensão futura. 4 testes novos (139 no
+total).
 
 **Atualização RNF-UX-01**: primeira rodada de correções de acessibilidade nas
 4 páginas do painel (`/`, `/login`, `/turmas`, `/auth/callback`). Trocados os

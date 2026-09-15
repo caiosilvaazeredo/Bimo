@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { TenantModule } from '../tenant/tenant.module';
 import { TurmaEspelhadaModule } from '../turma-espelhada/turma-espelhada.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 import { Aluno } from './aluno.entity';
 import { Matricula } from './matricula.entity';
 import { EntregaContingencia } from './entrega-contingencia.entity';
@@ -16,6 +17,7 @@ import { MatriculaController } from './matricula.controller';
     TypeOrmModule.forFeature([Aluno, Matricula, EntregaContingencia]),
     TenantModule,
     TurmaEspelhadaModule,
+    NotificationsModule,
   ],
   controllers: [ProfessorContingenciaController, MatriculaController],
   providers: [AlunosService, MatriculaService, EntregaContingenciaService],
