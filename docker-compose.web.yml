@@ -1,0 +1,17 @@
+# Deploy de apenas apps/web numa VM separada (cenário de 2 VMs Always Free
+# E2.1.Micro, 1GB RAM cada — ver docs/DEPLOY.md).
+#
+# Uso na VM do web:
+#   NEXT_PUBLIC_API_URL=http://<IP_da_VM_da_api>:3000 \
+#     docker compose -f docker-compose.web.yml up -d --build
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3000}
+    restart: unless-stopped
+    ports:
+      - "3001:3001"

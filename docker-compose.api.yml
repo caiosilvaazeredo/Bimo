@@ -1,0 +1,25 @@
+# Deploy de apenas apps/api numa VM separada (cenário de 2 VMs Always Free
+# E2.1.Micro, 1GB RAM cada, em vez de 1 VM Ampere só — ver docs/DEPLOY.md).
+#
+# Uso na VM da api:
+#   1. Copie apps/api/.env.example para .env na raiz e preencha.
+#   2. Extraia a Wallet do Autonomous Database em ./wallet.
+#   3. docker compose -f docker-compose.api.yml up -d --build
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    environment:
+      TNS_ADMIN: /wallet
+      DB_WALLET_LOCATION: /wallet
+      WORKERS_ENABLED: "true"
+      PERIODIC_SUMMARY_ENABLED: "true"
+    volumes:
+      - ./wallet:/wallet:ro
