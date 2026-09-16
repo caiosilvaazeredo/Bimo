@@ -364,10 +364,32 @@ os campos de link; nesse caso a coluna fica nula e o painel volta a mostrar apen
 "Criado". Não é um caminho comum (a maioria das turmas nasce pelo fluxo normal ou
 com um lado faltando), mas fica registrado como pendência caso vire prioridade.
 
-**Não executado nesta sessão** (exige ambiente real, não é código): teste de carga
-contra RNF-PERF-03 (script k6 em `apps/api/loadtest/`, pronto para rodar contra um
-staging real), medição de cobertura de teste formal para bater a meta de 80% de
-RNF-MAINT-01, e o processo de verificação OAuth do Google (OAuth verification/CASA)
+**Atualização infraestrutura/deploy**: banco Autonomous Database Always Free
+provisionado num tenant real (`bimodb`, região sa-saopaulo-1), conectado via
+Wallet (mTLS obrigatório nesse tier). `app.module.ts` e o novo
+`src/data-source.ts` (config só para o CLI do TypeORM) aceitam
+`DB_CONNECT_STRING` (alias do `tnsnames.ora` da Wallet) com fallback para
+host/port/serviceName. Migration inicial (`src/migrations/1758000000000-
+InitialSchema.ts`) escrita à mão com as 13 tabelas — não deu pra usar
+`typeorm migration:generate` porque essa geração exige uma conexão viva com
+o banco pra introspecção/diff, e a porta 1522 (TCPS/mTLS) está bloqueada no
+sandbox onde este agente roda; o DDL segue exatamente o mapeamento de tipos
+do driver Oracle do TypeORM (conferido lendo `OracleDriver.js`) pra não
+divergir se `migration:generate` for rodado no futuro contra o banco real.
+`npm run migration:run`/`migration:revert`/`migration:show` adicionados ao
+`apps/api/package.json`. Também: `Dockerfile` para `apps/api` e `apps/web`
+(build multi-stage, `output:'standalone'` no Next.js), `docker-compose.yml`
+e `docs/DEPLOY.md` com o passo a passo completo de hospedar numa VM Ampere
+A1 Always Free — validado nesta sessão até onde dá sem um daemon Docker
+disponível (o `npm ci`/`npm run build` que o Dockerfile executa foram
+replicados manualmente fora do Docker e funcionaram; `docker build`/
+`docker compose up` de ponta a ponta ficam para testar na VM real).
+
+**Não executado nesta sessão** (exige ambiente real, não é código): subir de
+fato os containers e rodar a migration contra o Autonomous Database (bloqueado
+pela mesma porta 1522/TCPS do sandbox), teste de carga contra RNF-PERF-03
+(script k6 em `apps/api/loadtest/`, pronto para rodar contra um staging
+real), e o processo de verificação OAuth do Google (OAuth verification/CASA)
 e admin consent do Microsoft Entra ID — ambos dependem de contas reais nos
-consoles do Google Cloud e do Microsoft Entra ID, fora do escopo de um agente de
-código.
+consoles do Google Cloud e do Microsoft Entra ID, fora do escopo de um agente
+de código.

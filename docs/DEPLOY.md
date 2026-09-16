@@ -117,10 +117,27 @@ curl http://localhost:3000/health
 
 ## 7. Rodar as migrations do banco
 
-O banco começa vazio — depois que a API conseguir conectar, aplique as
-migrations do TypeORM (`npm run typeorm migration:run` de dentro do
-container, ou via um job separado — ver instruções específicas quando as
-migrations forem geradas).
+O banco começa vazio (13 tabelas, uma por entidade). Rode a migration
+inicial (`src/migrations/1758000000000-InitialSchema.ts`) antes de usar a
+API pela primeira vez — ela não roda sozinha no boot, é um passo manual:
+
+A imagem Docker de produção da API não tem `ts-node`/TypeScript instalados
+(só o `dist/` já compilado), então rode a migration direto na VM, fora do
+container, com um `npm install` completo (não o `--omit=dev` da imagem):
+
+```bash
+cd ~/Bimo
+npm install --workspace apps/api --include-workspace-root
+cd apps/api
+export TNS_ADMIN=~/Bimo/wallet
+# use as mesmas DB_* do seu .env (export manual ou `set -a; source ../../.env; set +a`)
+npm run migration:run
+```
+
+Para conferir o que já rodou: `npm run migration:show`. Para desfazer a
+última migration: `npm run migration:revert`. Só precisa repetir isso
+quando uma migration nova for adicionada ao repositório — não é algo do
+dia a dia.
 
 ## 8. (Recomendado) Domínio + HTTPS
 
