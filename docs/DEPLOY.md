@@ -93,6 +93,11 @@ newgrp docker
 
 Repita esse passo 3 inteiro em cada VM, se for a topologia de 2 VMs.
 
+**Atalho**: depois de clonar o repo (próximo passo), `bash
+scripts/bootstrap-vm.sh` faz o swap + instalação do Docker acima de uma vez
+só (detecta RAM da VM, só cria swap se for baixa, idempotente — pode rodar
+de novo sem duplicar nada).
+
 ## 4. Levar o código para a VM
 
 Opção simples (clonar do GitHub), em cada VM:
