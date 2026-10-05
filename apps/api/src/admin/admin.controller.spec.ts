@@ -5,6 +5,7 @@ describe('AdminController.setConsentRegion (RNF-PRIV-02)', () => {
   const tenantsService = {
     setConsentRegion: jest.fn().mockResolvedValue(undefined),
     setContingencyEnabled: jest.fn().mockResolvedValue(undefined),
+    setAllowedEmailDomains: jest.fn().mockResolvedValue(undefined),
   };
   const professorsService = {
     listByTenant: jest.fn(),
@@ -104,5 +105,31 @@ describe('AdminController.setConsentRegion (RNF-PRIV-02)', () => {
         jobType: 'ADMIN_SET_CONTINGENCY',
       }),
     );
+  });
+
+  describe('setAllowedEmailDomains (RF-AUTH-03)', () => {
+    it('recusa quando "domains" não é uma lista', async () => {
+      await expect(
+        controller.setAllowedEmailDomains(req, { domains: 'uva.br' as any }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+      expect(tenantsService.setAllowedEmailDomains).not.toHaveBeenCalled();
+    });
+
+    it('grava os domínios e registra no log de auditoria', async () => {
+      await controller.setAllowedEmailDomains(req, {
+        domains: ['uva.br', 'veigadealmeida.edu.br'],
+      });
+
+      expect(tenantsService.setAllowedEmailDomains).toHaveBeenCalledWith(
+        'tenant-1',
+        ['uva.br', 'veigadealmeida.edu.br'],
+      );
+      expect(syncEventLogService.record).toHaveBeenCalledWith(
+        expect.objectContaining({
+          tenantId: 'tenant-1',
+          jobType: 'ADMIN_SET_ALLOWED_EMAIL_DOMAINS',
+        }),
+      );
+    });
   });
 });

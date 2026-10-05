@@ -108,4 +108,29 @@ describe('TenantsService', () => {
       );
     });
   });
+
+  describe('setAllowedEmailDomains (RF-AUTH-03)', () => {
+    it('normaliza (trim + minúsculas) e remove entradas vazias', async () => {
+      await service.setAllowedEmailDomains('tenant-1', [
+        ' UVA.br ',
+        'veigadealmeida.edu.br',
+        '',
+        '  ',
+      ]);
+
+      expect(repository.update).toHaveBeenCalledWith(
+        { id: 'tenant-1' },
+        { allowedEmailDomains: ['uva.br', 'veigadealmeida.edu.br'] },
+      );
+    });
+
+    it('aceita lista vazia para remover a restrição', async () => {
+      await service.setAllowedEmailDomains('tenant-1', []);
+
+      expect(repository.update).toHaveBeenCalledWith(
+        { id: 'tenant-1' },
+        { allowedEmailDomains: [] },
+      );
+    });
+  });
 });

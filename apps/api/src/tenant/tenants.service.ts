@@ -50,4 +50,18 @@ export class TenantsService {
   async setConsentRegion(id: string, region: string): Promise<void> {
     await this.tenantRepository.update({ id }, { consentRegion: region });
   }
+
+  /**
+   * RF-AUTH-03: restringe o login a uma lista de domínios de e-mail
+   * institucional. Lista vazia remove a restrição (qualquer domínio aceito).
+   */
+  async setAllowedEmailDomains(id: string, domains: string[]): Promise<void> {
+    const normalized = domains
+      .map((d) => d.trim().toLowerCase())
+      .filter((d) => d.length > 0);
+    await this.tenantRepository.update(
+      { id },
+      { allowedEmailDomains: normalized },
+    );
+  }
 }

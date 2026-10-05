@@ -133,7 +133,7 @@ O DoD global da v1 é o da seção 9 do documento de requisitos.
 ## 7. Status de implementação (código em `apps/api` e `apps/web`)
 
 As Fases 0-9 têm uma primeira implementação no branch `claude/pensive-dijkstra-3s3dva`,
-com build, lint e 278 testes unitários passando a cada commit. Resumo do que está
+com build, lint e 291 testes unitários passando a cada commit. Resumo do que está
 implementado de fato versus o que ficou simplificado ou pendente:
 
 **Completo**: Fase 0 (monorepo, CI, multi-tenancy), Fase 1 (RF-AUTH-01 a 04, RBAC/JWT —
@@ -321,6 +321,26 @@ combinações de guard testadas), `delete-coursework.handler.ts`,
 de erro concorrente) e `matricula.service.ts`/`nota.service.ts` (ramos de
 `?? null` em campos totalmente opcionais) — considerados de baixo risco e
 não perseguidos para não inflar a suíte com testes de pouco valor.
+
+**Atualização RF-AUTH-03 (restrição de domínio de e-mail)**: pedido real do
+piloto — aceitar login só de `@uva.br` e `@veigadealmeida.edu.br` (mesmo
+tenant Entra ID nos dois casos). O app registration do Microsoft Entra ID
+sozinho não restringe por domínio específico sem Conditional Access
+(recurso pago), então a validação real é feita no backend. Adicionado
+`Tenant.allowedEmailDomains` (lista, vazia = sem restrição) e
+`assertEmailDomainAllowed` (`apps/api/src/tenant/email-domain-policy.ts`),
+chamado em `AuthService.completeOAuthLogin` (professor) e
+`AlunoAuthService.completeOAuthLogin` (aluno) logo depois de resolver o
+tenant pelo slug do OAuth `state`, antes de qualquer escrita no banco —
+rejeita com `ForbiddenException` quando o domínio do e-mail não bate com
+nenhum da lista. Endpoint `PATCH /admin/tenant/dominios-permitidos`
+(`{ domains: string[] }`) para o admin institucional configurar. Também:
+`MicrosoftStrategy` ganhou suporte a `MICROSOFT_TENANT_ID` (usa o endpoint
+`/{tenantId}/oauth2/v2.0/...` em vez do genérico `/organizations/...`
+quando setado) — necessário se o app registration no Entra for criado como
+"single tenant" em vez de multi-tenant. Nova migration
+`1759600000000-AddTenantAllowedEmailDomains.ts`. 13 testes novos (291 no
+total).
 
 **Atualização RNF-UX-01**: primeira rodada de correções de acessibilidade nas
 4 páginas do painel (`/`, `/login`, `/turmas`, `/auth/callback`). Trocados os

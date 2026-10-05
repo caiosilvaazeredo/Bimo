@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { TenantContext } from '../tenant/tenant-context';
 import { TenantsService } from '../tenant/tenants.service';
+import { assertEmailDomainAllowed } from '../tenant/email-domain-policy';
 import { ProfessorsService } from '../professor/professors.service';
 import { ExternalAccountsService } from '../professor/external-accounts.service';
 import { ExternalProvider } from '../professor/external-provider.enum';
@@ -35,6 +36,8 @@ export class AuthService {
     const tenant = await this.tenantsService.findActiveBySlug(
       profile.tenantSlug,
     );
+
+    assertEmailDomainAllowed(tenant, profile.email);
 
     return TenantContext.run({ tenantId: tenant.id }, async () => {
       const professor =

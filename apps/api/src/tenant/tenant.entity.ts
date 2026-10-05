@@ -27,6 +27,18 @@ export class Tenant {
   @Column({ name: 'consent_region', default: 'BR-LGPD' })
   consentRegion: string;
 
+  /**
+   * RF-AUTH-03/RNF-SEC: domínios de e-mail institucional aceitos no login
+   * (ex: ["uva.br", "veigadealmeida.edu.br"]). Lista vazia/null = sem
+   * restrição (qualquer e-mail retornado pelo provedor OAuth é aceito).
+   * Validado em AuthService.completeOAuthLogin antes de criar o Professor
+   * — é a camada de defesa real, já que o app registration do Microsoft
+   * Entra ID sozinho não restringe por domínio específico sem Conditional
+   * Access (recurso pago).
+   */
+  @Column({ name: 'allowed_email_domains', type: 'simple-array', default: '' })
+  allowedEmailDomains: string[];
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 }

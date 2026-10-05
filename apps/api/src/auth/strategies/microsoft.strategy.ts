@@ -34,11 +34,17 @@ export class MicrosoftStrategy extends PassportStrategy(
   'microsoft',
 ) {
   constructor(config: ConfigService) {
+    // "organizations" aceita qualquer tenant Entra ID (multi-tenant) — é o
+    // padrão. Se o app registration no Entra foi criado como "Accounts in
+    // this organizational directory only" (single tenant, recomendado
+    // quando só uma organização — com um ou mais domínios verificados —
+    // deve logar), defina MICROSOFT_TENANT_ID com o Tenant ID do Entra
+    // para usar o endpoint específico em vez do genérico.
+    const tenantSegment =
+      config.get<string>('MICROSOFT_TENANT_ID') ?? 'organizations';
     super({
-      authorizationURL:
-        'https://login.microsoftonline.com/organizations/oauth2/v2.0/authorize',
-      tokenURL:
-        'https://login.microsoftonline.com/organizations/oauth2/v2.0/token',
+      authorizationURL: `https://login.microsoftonline.com/${tenantSegment}/oauth2/v2.0/authorize`,
+      tokenURL: `https://login.microsoftonline.com/${tenantSegment}/oauth2/v2.0/token`,
       clientID: config.get<string>('MICROSOFT_CLIENT_ID') ?? 'unset',
       clientSecret: config.get<string>('MICROSOFT_CLIENT_SECRET') ?? 'unset',
       callbackURL:

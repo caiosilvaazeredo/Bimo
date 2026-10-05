@@ -10,6 +10,7 @@ describe('AuthService', () => {
     slug: 'escola-exemplo',
     name: 'Escola Exemplo',
     active: true,
+    allowedEmailDomains: [] as string[],
   };
   const professor = {
     id: 'prof-uuid-1',
@@ -94,6 +95,40 @@ describe('AuthService', () => {
       tenantId: tenant.id,
       role: professor.role,
       kind: 'PROFESSOR',
+    });
+  });
+
+  describe('restrição de domínio de e-mail (RF-AUTH-03)', () => {
+    it('rejeita o login quando o tenant restringe domínios e o e-mail não bate com nenhum', async () => {
+      tenantsService.findActiveBySlug.mockResolvedValue({
+        ...tenant,
+        allowedEmailDomains: ['uva.br', 'veigadealmeida.edu.br'],
+      });
+
+      await expect(
+        authService.completeOAuthLogin(
+          { ...oauthProfile, email: 'alguem@gmail.com' },
+          ExternalProvider.MICROSOFT,
+        ),
+      ).rejects.toThrow(/não está autorizado/);
+
+      expect(
+        professorsService.findOrCreateByInstitutionalEmail,
+      ).not.toHaveBeenCalled();
+    });
+
+    it('permite o login quando o e-mail bate com um dos domínios permitidos', async () => {
+      tenantsService.findActiveBySlug.mockResolvedValue({
+        ...tenant,
+        allowedEmailDomains: ['uva.br', 'veigadealmeida.edu.br'],
+      });
+
+      await expect(
+        authService.completeOAuthLogin(
+          { ...oauthProfile, email: 'prof@uva.br' },
+          ExternalProvider.MICROSOFT,
+        ),
+      ).resolves.toBeDefined();
     });
   });
 });

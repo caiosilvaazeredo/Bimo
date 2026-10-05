@@ -113,4 +113,30 @@ export class AdminController {
       detail: `region=${body.region} por admin=${req.user.sub}`,
     });
   }
+
+  /**
+   * RF-AUTH-03/RNF-SEC-04: restringe o login (professor e aluno) aos
+   * domínios de e-mail institucional informados. Enviar lista vazia remove
+   * a restrição.
+   */
+  @Patch('tenant/dominios-permitidos')
+  async setAllowedEmailDomains(
+    @Req() req: Request & { user: BimoJwtPayload },
+    @Body() body: { domains: string[] },
+  ) {
+    if (!Array.isArray(body.domains)) {
+      throw new BadRequestException(
+        '"domains" deve ser uma lista de strings (ex: ["uva.br", "veigadealmeida.edu.br"]).',
+      );
+    }
+    const { tenantId } = req.user;
+    await this.tenantsService.setAllowedEmailDomains(tenantId, body.domains);
+    await this.syncEventLogService.record({
+      tenantId,
+      jobType: 'ADMIN_SET_ALLOWED_EMAIL_DOMAINS',
+      resourceId: tenantId,
+      result: 'SUCCESS',
+      detail: `domains=${body.domains.join(',')} por admin=${req.user.sub}`,
+    });
+  }
 }

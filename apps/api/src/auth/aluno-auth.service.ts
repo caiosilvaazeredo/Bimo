@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { TenantContext } from '../tenant/tenant-context';
 import { TenantsService } from '../tenant/tenants.service';
+import { assertEmailDomainAllowed } from '../tenant/email-domain-policy';
 import { AlunosService } from '../aluno/alunos.service';
 import { AlunoJwtPayload } from './bimo-jwt-payload';
 import { OAuthProfile } from './strategies/oauth-profile';
@@ -33,6 +34,8 @@ export class AlunoAuthService {
     const tenant = await this.tenantsService.findActiveBySlug(
       profile.tenantSlug,
     );
+
+    assertEmailDomainAllowed(tenant, profile.email);
 
     return TenantContext.run({ tenantId: tenant.id }, async () => {
       const aluno = await this.alunosService.findOrCreateByInstitutionalEmail({
